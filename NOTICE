@@ -1,13 +1,13 @@
 NOTICE
 
-Copyright (c) 2006-2022 European Space Agency and others
+Copyright (c) 2006-2024 European Space Agency and others
 
 # Notices Committers
 
 The original software was funded by the European Space Agency. 
-The community development of this software is performed at www.space-codev.org.
+The community development of this software is performed at Github.
 
- * Project home: https://github.com/esa/sleapi-j.git
+ * Project home: https://github.com/esa/sleapi-j
 
  ## Trademarks
 
@@ -36,7 +36,7 @@ The community development of this software is performed at www.space-codev.org.
 
  The project maintains the following source code repositories:
 
-  * https://github.com/esa/sleapi-j.git
+  * https://github.com/esa/sleapi-j
 
   ## Third-party Content
 
