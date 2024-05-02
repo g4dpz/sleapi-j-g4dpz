@@ -1,6 +1,6 @@
 # Contributing to Java SLE API
 
-We welcome contributions to this software at <https://github.com/esa/sleapi-j.git>.
+We welcome contributions to this software at <https://github.com/esa/sleapi-j>.
 
 ## Contributing source code changes
 
@@ -14,7 +14,7 @@ Please follow the "fork-and-pull" workflow.
  
 ## Issues
 
-Feel free to submit issues and enhancement requests in the Gitlab Issues Tracker of the Gitlab project at https://gitlab.space-codev.org. 
+Feel free to submit issues and enhancement requests at https://github.com/esa/sleapi-j/issues.
 
 Please do NOT create publicly viewable issues for suspected security vulnerabilities.
       
