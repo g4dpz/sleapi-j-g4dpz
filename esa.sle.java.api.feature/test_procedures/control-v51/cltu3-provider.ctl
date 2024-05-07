@@ -64,13 +64,10 @@ wait
 2
 
 
-
-###CLTU-PEER-ABORT BY PROVIDER
-peer_abort
-y
-pad     #diagnostic_code
-1       #unexpectedResponderId
-ok      #send
+###wait_peer_abort
+wait_event
+65
+1
 
 ###wait_bind_invoke
 wait_event
@@ -83,10 +80,6 @@ wait_event
 4
 1
 
-###wait_short_moment
-wait_event
-4
-1
 
 ####goto_application
 up

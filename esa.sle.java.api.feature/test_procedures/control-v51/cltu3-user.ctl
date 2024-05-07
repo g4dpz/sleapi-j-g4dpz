@@ -66,15 +66,24 @@ wait_event
 65
 1
 
-###wait_peer_abort
-wait_event
-65
-1
-
 ###wait_short_time
 wait_event
 2
 1
+
+###peer abort
+###CLTU-PEER-ABORT
+peer_abort
+y
+pad     #diagnostic_code
+1       #unexpectedResponderId
+ok      #send
+
+
+###wait_short_time
+#wait_event
+#2
+#1
 
 ####send_a_bind_invoke_operation
 bind
