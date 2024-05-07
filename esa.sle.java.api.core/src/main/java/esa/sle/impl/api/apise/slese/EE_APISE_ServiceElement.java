@@ -946,6 +946,7 @@ public class EE_APISE_ServiceElement implements ISLE_SEAdmin, ISLE_TraceControl,
 
         this.startTraceForwarded = false;
         this.traceLevel = SLE_TraceLevel.sleTL_low;
+        this.trace = null;
 
         if (LOG.isLoggable(Level.FINEST))
         {
