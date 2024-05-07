@@ -13,3 +13,4 @@ esa.sle.java.api.core/lib/
 # Ignore generated files
 **/generated/**
 **/src_generated/**
+.DS_Store
