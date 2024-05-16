@@ -120,8 +120,8 @@ public class EE_APIPX_TMLMessageFactory {
 			}
 		} else {
 			if (dataRead == 1) {
-				if (LOG.isLoggable(Level.FINEST)) {
-					LOG.finest("1 byte read from the socket - assume a PEER ABORT received with diagnostic "
+				if (LOG.isLoggable(Level.INFO)) {
+					LOG.info("1 byte read from the socket - assume a PEER ABORT received with diagnostic "
 							+ this.buf[0]);
 				}
 				// assume buf[0] peer abort diagnostic
