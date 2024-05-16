@@ -915,11 +915,11 @@ public abstract class EE_APIPX_Channel implements IEE_ChannelInitiate, ISLE_Time
                 String msg = " (" + diag + ") ";
                 trace(EE_LogMsg.TMLTR_SENDABORT.getCode(), SLE_TraceLevel.sleTL_medium, msg);
             }
-            // write urgent data with diagnostic
+            // write urgent data with diagnostic            
             this.connectedSock.sendUrgentData(diag);
-            if (LOG.isLoggable(Level.FINEST))
+            if (LOG.isLoggable(Level.INFO))
             {
-                LOG.finest("URGENT DATA SENT");
+                LOG.info("URGENT DATA SENT: " + diag);
             }
             // stop the hbt and hbr timers
             stopTimer(EE_APIPX_TMLTimer.eeAPIPXtt_HBR);
