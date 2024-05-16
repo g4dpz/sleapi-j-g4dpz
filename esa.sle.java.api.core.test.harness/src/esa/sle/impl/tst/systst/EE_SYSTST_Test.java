@@ -1041,16 +1041,16 @@ public class EE_SYSTST_Test implements ITST_Application, IUnknown
                     p_isle_tcc = iu.queryInterface(ISLE_TraceControl.class);
                     try
                     {
-                        p_isle_tcc.stopTrace();
+                    	if(this.traceStarted == true)
+                    	{
+                    	  p_isle_tcc.stopTrace();
+                    	}
                     }
                     catch (SleApiException e)
                     {
 
-                        // if (this.LOG.isLoggable(Level.FINEST))
-                        // {
-                        // this.LOG.finest("Expected : " + e.getHResult() +
-                        // " from stopTrace()");
-                        // }
+                    	LOG.warning("Exception with HRESULT : " + e.getHResult() +
+                    			" from stopTrace()");
                     }
 
                 }
