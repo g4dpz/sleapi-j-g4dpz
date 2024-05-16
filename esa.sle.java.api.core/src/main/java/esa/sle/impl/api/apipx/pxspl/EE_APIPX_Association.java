@@ -302,7 +302,7 @@ public abstract class EE_APIPX_Association implements ISLE_SrvProxyInitiate, ISL
 
         if (!this.traceStarted)
         {
-            throw new SleApiException(HRESULT.SLE_E_STATE);
+            return; // stop trace is called from several places, no need to throw an exeption
         }
 
         HRESULT res = HRESULT.S_OK;
