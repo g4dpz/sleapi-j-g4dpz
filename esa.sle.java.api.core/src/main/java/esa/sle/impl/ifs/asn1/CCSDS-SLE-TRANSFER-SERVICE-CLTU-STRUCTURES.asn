@@ -177,7 +177,7 @@ CltuGetParameterV4 ::= CHOICE
      }
    }
 ,  parGlobalVcid [2] SEQUENCE
-   { parameterName ParameterName (clcwGlobalVcid)
+   { parameterName ParameterName (clcwGlobalVcId)
    , parameterValue GvcId
    }
 ,  parClcwPhysicalChannel [3] SEQUENCE
@@ -324,7 +324,7 @@ CltuGetParameterV1To3              ::=  --$ PDU CLTU -- CHOICE
    , parameterValue IntUnsignedShort
    }
 ,  parGlobalVcid                    [13] SEQUENCE
-   { parameterName ParameterName (clcwGlobalVcid)
+   { parameterName ParameterName (clcwGlobalVcId)
    , parameterValue GvcId
    }
 , parClcwPhysicalChannel            [14] SEQUENCE
