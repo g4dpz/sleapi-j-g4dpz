@@ -29,6 +29,7 @@ public class EE_APIPX_ClosedState implements ITMLState
         {
             // -> S1
             this.channel.setChannelState(new EE_APIPX_StartingState(this.channel));
+            this.channel.startCommThreads();
             ((EE_APIPX_InitiatingChannel) this.channel).tcpConnectReq(respPortId);
         }
         else if (this.channel instanceof EE_APIPX_RespondingChannel)
@@ -57,6 +58,7 @@ public class EE_APIPX_ClosedState implements ITMLState
             this.channel.setFirstPDU(false);
             // -> S1
             this.channel.setChannelState(new EE_APIPX_StartingState(this.channel));
+            this.channel.startCommThreads();
         }
         else
         {

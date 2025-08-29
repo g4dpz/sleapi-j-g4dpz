@@ -32,5 +32,6 @@ public class EE_APIPX_RespondingChannel extends EE_APIPX_Channel
         this.tmsDuration = new EE_Duration(duration);
 
         super.setChannelState(new EE_APIPX_StartingState(this));
+        this.startCommThreads();
     }
 }

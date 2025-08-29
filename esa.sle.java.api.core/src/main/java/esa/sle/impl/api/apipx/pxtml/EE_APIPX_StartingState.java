@@ -27,7 +27,6 @@ public class EE_APIPX_StartingState implements ITMLState
     public EE_APIPX_StartingState(EE_APIPX_Channel channel)
     {
         this.channel = channel;
-        this.channel.startCommThreads();
     }
 
     @Override

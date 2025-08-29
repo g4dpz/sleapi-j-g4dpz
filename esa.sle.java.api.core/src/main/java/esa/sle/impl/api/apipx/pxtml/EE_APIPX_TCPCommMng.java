@@ -54,7 +54,6 @@ public class EE_APIPX_TCPCommMng
     {
         this.sendingThr.start();
         this.receivingThr.start();
-        // this.processingThr.start();
     }
 
     public void stopThreads()
