@@ -9,7 +9,7 @@ The SLE API package supports the following SLE transfer services:
 
 ### Development
 
-### Prerequisites
+## Prerequisites
 SUSE Linux Enterprise Server 15
 Maven 3.8.5 
 OpenJDK 11
