@@ -5,7 +5,7 @@ Bundle-Name: SLE API Test Harness
 Bundle-SymbolicName: esa.sle.java.api.core.test.harness
 Bundle-Version: 5.1.6
 Automatic-Module-Name: esa.sle.java.api.core.test.harness
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8,JavaSE-11
+Bundle-RequiredExecutionEnvironment: JavaSE-17
 Require-Bundle: esa.sle.java.api.core;bundle-version="5.1.1"
 Export-Package: esa.sle.impl.tst.systst,
  esa.sle.impl.tst.systst.multi,

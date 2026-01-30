@@ -76,5 +76,5 @@ Export-Package: ccsds.sle.api.isle.exception,
  isp1.rcf.pdus,
  isp1.rocf.pdus,
  isp1.sle.bind.pdus
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8,JavaSE-11
+Bundle-RequiredExecutionEnvironment: JavaSE-17
 Bundle-ClassPath: ., lib/jasn1-compiler.jar, lib/jasn1.jar

@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: esa.sle.sicf.si.parser.file
 Bundle-SymbolicName: esa.sle.sicf.si.parser.file
 Bundle-Version: 5.1.6
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8,JavaSE-11
+Bundle-RequiredExecutionEnvironment: JavaSE-17
 Export-Package: esa.sle.sicf.si.parser.file
 Require-Bundle: esa.sle.java.api.core;bundle-version="5.1.1",
  esa.sle.sicf.si.descriptors

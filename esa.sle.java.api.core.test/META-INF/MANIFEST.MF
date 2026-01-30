@@ -5,6 +5,6 @@ Bundle-SymbolicName: esa.sle.java.api.core.test
 Bundle-Version: 5.1.6
 Fragment-Host: esa.sle.java.api.core;bundle-version="5.1.1"
 Automatic-Module-Name: esa.sle.java.api.core.test
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8,JavaSE-11
+Bundle-RequiredExecutionEnvironment: JavaSE-17
 Require-Bundle: org.junit;bundle-version="4.11.0",
  javax.annotation;bundle-version="1.2.0"

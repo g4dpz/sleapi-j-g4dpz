@@ -12,7 +12,7 @@ The SLE API package supports the following SLE transfer services:
 ## Prerequisites
 SUSE Linux Enterprise Server 15
 Maven 3.8.5 
-OpenJDK 11
+OpenJDK 17
 
 ### Build command
     mvn install
