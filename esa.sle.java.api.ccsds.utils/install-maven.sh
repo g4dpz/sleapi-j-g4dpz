@@ -4,6 +4,9 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 echo "================================================================================"
 echo "Installing CCSDS Utilities as Standard Maven Artifact"
 echo "================================================================================"
@@ -11,7 +14,7 @@ echo ""
 
 # Build with standalone POM
 echo "[1/3] Building with standalone Maven POM..."
-mvn -f pom-standalone.xml clean install
+mvn -f "$SCRIPT_DIR/pom-standalone.xml" clean install
 
 echo ""
 echo "[2/3] Verifying installation..."

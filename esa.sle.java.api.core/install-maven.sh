@@ -4,6 +4,9 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 echo "================================================================================"
 echo "Installing SLE API Core as Standard Maven Artifact"
 echo "================================================================================"
@@ -15,7 +18,7 @@ echo "  - Generating ASN.1 sources..."
 echo "  - Compiling core library..."
 echo "  - Creating JARs..."
 echo ""
-mvn -f pom-standalone.xml clean install
+mvn -f "$SCRIPT_DIR/pom-standalone.xml" clean install
 
 echo ""
 echo "[2/3] Verifying installation..."
