@@ -1,5 +1,8 @@
 package esa.sle.demo.common;
 
+import esa.sle.ccsds.utils.clcw.CLCWEncoder;
+import esa.sle.ccsds.utils.crc.CRC16Calculator;
+
 import java.nio.ByteBuffer;
 import java.time.Instant;
 
@@ -89,49 +92,21 @@ public class TelemetryFrame {
         // - Spare (1 bit) = 0
         // - Report Value (8 bits) = last command frame count acknowledged
         
-        int clcw = 0;
-        
-        // Set VCID (bits 8-13)
-        clcw |= (virtualChannelId & 0x3F) << 18;
-        
-        // Set Report Value (bits 24-31) - last command frame count received
-        if (lastCommandReceived >= 0) {
-            clcw |= (lastCommandReceived & 0xFF);
-        }
+        int clcw = (lastCommandReceived >= 0) ?
+                CLCWEncoder.encode(virtualChannelId, lastCommandReceived) :
+                CLCWEncoder.encode(virtualChannelId, 0);
         
         buffer.putInt(clcw);
         
         // Frame Error Control Field (FECF) - 2 bytes CRC-16
-        // Calculate CRC-16-CCITT over entire frame (excluding FECF itself)
+        // Use library utility for CRC-16 calculation
         byte[] frameWithoutFECF = new byte[FRAME_SIZE - FECF_SIZE];
         buffer.position(0);
         buffer.get(frameWithoutFECF);
-        int crc = calculateCRC16(frameWithoutFECF);
+        int crc = CRC16Calculator.calculate(frameWithoutFECF);
         buffer.putShort((short) crc);
         
         return buffer.array();
-    }
-    
-    /**
-     * Calculate CRC-16-CCITT (polynomial 0x1021)
-     * Used for CCSDS Frame Error Control Field
-     */
-    private int calculateCRC16(byte[] data) {
-        int crc = 0xFFFF; // Initial value
-        int polynomial = 0x1021; // CRC-16-CCITT polynomial
-        
-        for (byte b : data) {
-            crc ^= (b & 0xFF) << 8;
-            for (int i = 0; i < 8; i++) {
-                if ((crc & 0x8000) != 0) {
-                    crc = (crc << 1) ^ polynomial;
-                } else {
-                    crc = crc << 1;
-                }
-            }
-        }
-        
-        return crc & 0xFFFF;
     }
     
     public byte[] getData() {

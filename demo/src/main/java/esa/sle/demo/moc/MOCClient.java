@@ -1,6 +1,7 @@
 package esa.sle.demo.moc;
 
 import esa.sle.ccsds.utils.cltu.CLTUEncoder;
+import esa.sle.ccsds.utils.clcw.CLCWDecoder;
 import esa.sle.demo.common.CommandFrame;
 
 import java.io.BufferedReader;
@@ -235,18 +236,17 @@ public class MOCClient {
         
         String message = new String(dataField, 0, messageLength);
         
-        // Decode CLCW from OCF (bytes 1109-1112)
+        // Decode CLCW from OCF (bytes 1109-1112) using library utility
         int ocfStart = frameData.length - 6;
         buffer.position(ocfStart);
-        int clcw = buffer.getInt();
+        int clcwWord = buffer.getInt();
         
-        // Extract CLCW fields
-        int clcwVCID = (clcw >> 18) & 0x3F;
-        int clcwReportValue = clcw & 0xFF;
+        // Decode CLCW to extract report value
+        CLCWDecoder.CLCW clcw = CLCWDecoder.decode(clcwWord);
+        int clcwReportValue = clcw.getReportValue();
         
         // Display frame with CLCW acknowledgment
-        String clcwInfo = (clcwReportValue >= 0) ? 
-                String.format("CLCW_ACK=%d", clcwReportValue) : "CLCW_ACK=NONE";
+        String clcwInfo = String.format("CLCW_ACK=%d", clcwReportValue);
         
         System.out.printf("[RAF] Frame #%d | SCID=%d VCID=%d Count=%d | %s | %s%n",
                 frameNum, spacecraftId, virtualChannelId, frameCount, clcwInfo, message);

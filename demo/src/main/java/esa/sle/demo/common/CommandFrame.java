@@ -1,5 +1,7 @@
 package esa.sle.demo.common;
 
+import esa.sle.ccsds.utils.crc.CRC16Calculator;
+
 import java.nio.ByteBuffer;
 import java.time.Instant;
 
@@ -96,34 +98,14 @@ public class CommandFrame {
         }
         
         // Frame Error Control Field (FECF) - 2 bytes CRC-16
+        // Use library utility for CRC-16 calculation
         byte[] frameWithoutFECF = new byte[FRAME_SIZE - FECF_SIZE];
         buffer.position(0);
         buffer.get(frameWithoutFECF);
-        int crc = calculateCRC16(frameWithoutFECF);
+        int crc = CRC16Calculator.calculate(frameWithoutFECF);
         buffer.putShort((short) crc);
         
         return buffer.array();
-    }
-    
-    /**
-     * Calculate CRC-16-CCITT (polynomial 0x1021)
-     */
-    private int calculateCRC16(byte[] data) {
-        int crc = 0xFFFF;
-        int polynomial = 0x1021;
-        
-        for (byte b : data) {
-            crc ^= (b & 0xFF) << 8;
-            for (int i = 0; i < 8; i++) {
-                if ((crc & 0x8000) != 0) {
-                    crc = (crc << 1) ^ polynomial;
-                } else {
-                    crc = crc << 1;
-                }
-            }
-        }
-        
-        return crc & 0xFFFF;
     }
     
     public byte[] getData() {

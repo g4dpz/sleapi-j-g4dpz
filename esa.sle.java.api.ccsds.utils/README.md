@@ -45,20 +45,75 @@ int cltuSize = CLTUEncoder.calculateCLTUSize(commandFrame.length);
 int codeBlocks = CLTUEncoder.getCodeBlockCount(commandFrame.length);
 ```
 
-### CCSDS Frames (Future)
+### CRC (Cyclic Redundancy Check)
 
-Utilities for building and parsing CCSDS Transfer Frames:
-- Telemetry Transfer Frames (TM)
-- Telecommand Transfer Frames (TC)
-- AOS Transfer Frames
+CRC-16-CCITT calculation for Frame Error Control Field (FECF) as specified in CCSDS 131.0-B-3.
 
-### CLCW (Future)
+**Classes:**
+- `CRC16Calculator` - Calculate and verify CRC-16-CCITT (polynomial 0x1021)
 
-Command Link Control Word encoding/decoding for command acknowledgment in the Operational Control Field (OCF).
+**Features:**
+- CRC-16-CCITT with polynomial 0x1021
+- Initial value 0xFFFF
+- Calculate CRC for data
+- Verify CRC against expected value
+- Append CRC to data
+- Verify appended CRC
 
-### CRC (Future)
+**Usage Example:**
+```java
+import esa.sle.ccsds.utils.crc.CRC16Calculator;
 
-CRC-16-CCITT calculation for Frame Error Control Field (FECF).
+// Calculate CRC for frame data
+byte[] frameData = ...; // Frame without FECF
+int crc = CRC16Calculator.calculate(frameData);
+
+// Verify CRC
+boolean valid = CRC16Calculator.verify(frameData, expectedCrc);
+
+// Append CRC to data
+byte[] frameWithCrc = CRC16Calculator.appendCrc(frameData);
+
+// Verify appended CRC
+boolean valid = CRC16Calculator.verifyAppended(frameWithCrc);
+```
+
+### CLCW (Communications Link Control Word)
+
+CLCW encoding/decoding for command acknowledgment in the Operational Control Field (OCF) as specified in CCSDS 232.0-B-3.
+
+**Classes:**
+- `CLCWEncoder` - Build CLCW for OCF
+- `CLCWDecoder` - Decode CLCW from OCF
+
+**Features:**
+- Simple encoding with VCID and Report Value
+- Advanced encoding with all CLCW fields
+- Decode all CLCW fields
+- Check nominal status
+- Builder pattern for complex CLCW
+
+**Usage Example:**
+```java
+import esa.sle.ccsds.utils.clcw.*;
+
+// Simple encoding (most common use case)
+int clcw = CLCWEncoder.encode(virtualChannelId, lastCommandFrameCount);
+
+// Advanced encoding with all fields
+int clcw = CLCWEncoder.builder()
+    .setVirtualChannelId(0)
+    .setReportValue(5)
+    .setLockout(false)
+    .setWait(false)
+    .build();
+
+// Decode CLCW
+CLCWDecoder.CLCW decoded = CLCWDecoder.decode(clcwWord);
+System.out.println("Report Value: " + decoded.getReportValue());
+System.out.println("VCID: " + decoded.getVirtualChannelId());
+System.out.println("Nominal: " + decoded.isNominal());
+```
 
 ## Integration with SLE Java API
 
@@ -107,7 +162,8 @@ This module extends the SLE Java API with physical layer utilities. Contribution
 
 1. **Full BCH(63,56) Implementation** - Use proper BCH polynomial for error correction
 2. **Frame Builders** - Helper classes for constructing CCSDS frames
-3. **CLCW Utilities** - Encode/decode Command Link Control Word
-4. **CRC Utilities** - CRC-16-CCITT for FECF
-5. **Randomization** - Pseudo-randomization for spectral shaping
-6. **Reed-Solomon** - Forward error correction encoding/decoding
+3. **Frame Parsers** - Helper classes for parsing CCSDS frame headers
+4. **Randomization** - Pseudo-randomization for spectral shaping
+5. **Reed-Solomon** - Forward error correction encoding/decoding
+6. **Time Code Utilities** - CUC and CDS time code encoding/decoding
+7. **Space Packet Protocol** - CCSDS Space Packet building and parsing
