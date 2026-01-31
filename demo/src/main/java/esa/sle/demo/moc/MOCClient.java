@@ -2,6 +2,8 @@ package esa.sle.demo.moc;
 
 import esa.sle.ccsds.utils.cltu.CLTUEncoder;
 import esa.sle.ccsds.utils.clcw.CLCWDecoder;
+import esa.sle.ccsds.utils.frames.FrameHeader;
+import esa.sle.ccsds.utils.frames.FrameHeaderParser;
 import esa.sle.demo.common.CommandFrame;
 
 import java.io.BufferedReader;
@@ -201,18 +203,8 @@ public class MOCClient {
         int frameNum = framesReceived.incrementAndGet();
         dataVolume.addAndGet(frameData.length);
         
-        // Parse frame header
-        ByteBuffer buffer = ByteBuffer.wrap(frameData);
-        
-        short word1 = buffer.getShort();
-        int spacecraftId = (word1 >> 4) & 0x3FF;
-        int virtualChannelId = (word1 >> 1) & 0x7;
-        
-        byte mcFrameCount = buffer.get();
-        byte vcFrameCount = buffer.get();
-        int frameCount = ((mcFrameCount & 0xFF) << 8) | (vcFrameCount & 0xFF);
-        
-        buffer.getShort(); // Skip data field status
+        // Parse frame header using library utility
+        FrameHeader header = FrameHeaderParser.parse(frameData);
         
         // Dump first frame structure
         if (frameNum == 1) {
@@ -220,6 +212,7 @@ public class MOCClient {
         }
         
         // Extract message from data field
+        ByteBuffer buffer = ByteBuffer.wrap(frameData);
         int dataStart = 6;
         int dataEnd = frameData.length - 6;
         byte[] dataField = new byte[dataEnd - dataStart];
@@ -249,7 +242,8 @@ public class MOCClient {
         String clcwInfo = String.format("CLCW_ACK=%d", clcwReportValue);
         
         System.out.printf("[RAF] Frame #%d | SCID=%d VCID=%d Count=%d | %s | %s%n",
-                frameNum, spacecraftId, virtualChannelId, frameCount, clcwInfo, message);
+                frameNum, header.getSpacecraftId(), header.getVirtualChannelId(), 
+                header.getFrameCount(), clcwInfo, message);
         
         // Automated command sequence
         if (frameNum == 10) {

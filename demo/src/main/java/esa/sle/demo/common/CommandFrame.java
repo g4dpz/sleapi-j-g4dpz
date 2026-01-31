@@ -1,6 +1,8 @@
 package esa.sle.demo.common;
 
 import esa.sle.ccsds.utils.crc.CRC16Calculator;
+import esa.sle.ccsds.utils.frames.FrameHeader;
+import esa.sle.ccsds.utils.frames.FrameHeaderParser;
 
 import java.nio.ByteBuffer;
 import java.time.Instant;
@@ -38,20 +40,16 @@ public class CommandFrame {
         this.data = frameData;
         this.timestamp = Instant.now();
         
-        ByteBuffer buffer = ByteBuffer.wrap(frameData);
-        
-        // Parse header
-        short word1 = buffer.getShort();
-        this.spacecraftId = (word1 >> 4) & 0x3FF;
-        this.virtualChannelId = (word1 >> 1) & 0x7;
-        
-        byte mcFrameCount = buffer.get();
-        byte vcFrameCount = buffer.get();
-        this.frameCount = ((mcFrameCount & 0xFF) << 8) | (vcFrameCount & 0xFF);
-        
-        buffer.getShort(); // Skip data field status
+        // Parse header using library utility
+        FrameHeader header = FrameHeaderParser.parse(frameData);
+        this.spacecraftId = header.getSpacecraftId();
+        this.virtualChannelId = header.getVirtualChannelId();
+        this.frameCount = header.getFrameCount();
         
         // Extract command from data field
+        ByteBuffer buffer = ByteBuffer.wrap(frameData);
+        buffer.position(HEADER_SIZE); // Skip header
+        
         int dataLength = frameData.length - HEADER_SIZE - FECF_SIZE;
         byte[] commandBytes = new byte[dataLength];
         buffer.get(commandBytes);

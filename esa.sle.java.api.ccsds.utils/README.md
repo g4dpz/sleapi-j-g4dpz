@@ -45,6 +45,42 @@ int cltuSize = CLTUEncoder.calculateCLTUSize(commandFrame.length);
 int codeBlocks = CLTUEncoder.getCodeBlockCount(commandFrame.length);
 ```
 
+### Frame Header Parser
+
+Frame header parsing utilities for CCSDS Transfer Frames as specified in CCSDS 732.0-B-3.
+
+**Classes:**
+- `FrameHeaderParser` - Parse CCSDS frame headers
+- `FrameHeader` - Immutable header object with all fields
+
+**Features:**
+- Parse complete frame header (6 bytes)
+- Extract all header fields
+- Quick extraction methods (SCID, VCID, frame count)
+- Frame validation
+- Support for TM and TC frames
+
+**Usage Example:**
+```java
+import esa.sle.ccsds.utils.frames.*;
+
+// Parse complete header
+FrameHeader header = FrameHeaderParser.parse(frameData);
+System.out.println("SCID: " + header.getSpacecraftId());
+System.out.println("VCID: " + header.getVirtualChannelId());
+System.out.println("Frame Count: " + header.getFrameCount());
+System.out.println("OCF Present: " + header.isOcfPresent());
+System.out.println("Type: " + (header.isCommandFrame() ? "CMD" : "TM"));
+
+// Quick extraction (without full parsing)
+int scid = FrameHeaderParser.extractSpacecraftId(frameData);
+int vcid = FrameHeaderParser.extractVirtualChannelId(frameData);
+int count = FrameHeaderParser.extractFrameCount(frameData);
+
+// Validate frame
+boolean valid = FrameHeaderParser.isValidFrame(frameData);
+```
+
 ### CRC (Cyclic Redundancy Check)
 
 CRC-16-CCITT calculation for Frame Error Control Field (FECF) as specified in CCSDS 131.0-B-3.
