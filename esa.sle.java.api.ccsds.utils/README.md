@@ -113,6 +113,55 @@ int count = FrameHeaderParser.extractFrameCount(frameData);
 boolean valid = FrameHeaderParser.isValidFrame(frameData);
 ```
 
+### Frame Builders
+
+Frame building utilities for CCSDS Transfer Frames as specified in CCSDS 732.0-B-3 and 232.0-B-3.
+
+**Classes:**
+- `TelemetryFrameBuilder` - Build complete CCSDS TM Transfer Frames
+- `CommandFrameBuilder` - Build complete CCSDS TC Transfer Frames
+
+**Features:**
+- Build complete frames with header, data, OCF (TM only), and FECF
+- Builder pattern for flexible construction
+- Automatic CRC-16 calculation
+- Configurable frame size
+- Support for CLCW in OCF
+- Convenience methods for simple frames
+
+**Usage Example:**
+```java
+import esa.sle.ccsds.utils.frames.*;
+import esa.sle.ccsds.utils.clcw.CLCWEncoder;
+
+// Build telemetry frame with builder pattern
+int clcw = CLCWEncoder.encode(vcid, lastCommandReceived);
+byte[] tmFrame = TelemetryFrameBuilder.builder()
+    .setSpacecraftId(185)
+    .setVirtualChannelId(0)
+    .setFrameCount(42)
+    .setData(telemetryData)
+    .setOcf(clcw)
+    .build();
+
+// Build simple telemetry frame
+byte[] tmFrame = TelemetryFrameBuilder.buildSimple(185, 0, 42, telemetryData);
+
+// Build telemetry frame with CLCW
+byte[] tmFrame = TelemetryFrameBuilder.buildWithClcw(185, 0, 42, telemetryData, clcw);
+
+// Build command frame
+byte[] tcFrame = CommandFrameBuilder.builder()
+    .setSpacecraftId(185)
+    .setVirtualChannelId(0)
+    .setFrameCount(10)
+    .setData(commandData)
+    .build();
+
+// Build simple command frame
+byte[] tcFrame = CommandFrameBuilder.buildSimple(185, 0, 10, commandData);
+```
+
 ### CRC (Cyclic Redundancy Check)
 
 CRC-16-CCITT calculation for Frame Error Control Field (FECF) as specified in CCSDS 131.0-B-3.

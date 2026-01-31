@@ -1,9 +1,7 @@
 package esa.sle.demo.common;
 
 import esa.sle.ccsds.utils.clcw.CLCWEncoder;
-import esa.sle.ccsds.utils.crc.CRC16Calculator;
 
-import java.nio.ByteBuffer;
 import java.time.Instant;
 
 /**
@@ -38,75 +36,20 @@ public class TelemetryFrame {
     }
     
     private byte[] buildFrame(byte[] payload) {
-        ByteBuffer buffer = ByteBuffer.allocate(FRAME_SIZE);
-        
-        // Primary Header (6 bytes)
-        // Version (2 bits) + Spacecraft ID (10 bits) + Virtual Channel ID (3 bits) + OCF Flag (1 bit)
-        int ocfFlag = 1; // OCF is present
-        int word1 = (0 << 14) | ((spacecraftId & 0x3FF) << 4) | ((virtualChannelId & 0x7) << 1) | ocfFlag;
-        buffer.putShort((short) word1);
-        
-        // Master Channel Frame Count (8 bits) + Virtual Channel Frame Count (8 bits)
-        buffer.put((byte) (frameCount >> 8));
-        buffer.put((byte) (frameCount & 0xFF));
-        
-        // Transfer Frame Data Field Status (16 bits)
-        // Bit 0: Transfer Frame Secondary Header Flag (0 = not present)
-        // Bit 1: Sync Flag (1 = in sync)
-        // Bit 2: Packet Order Flag (0 = not used)
-        // Bit 3: Segment Length ID (00 = not used)
-        // Bits 5-15: First Header Pointer (all 1s = no packet start)
-        buffer.putShort((short) 0x4000); // Sync flag set
-        
-        // Data Field (1115 - 6 header - 4 OCF - 2 FECF = 1103 bytes)
-        int dataLength = FRAME_SIZE - HEADER_SIZE - OCF_SIZE - FECF_SIZE;
-        if (payload != null && payload.length > 0) {
-            int copyLength = Math.min(payload.length, dataLength);
-            buffer.put(payload, 0, copyLength);
-            // Pad remaining with zeros
-            for (int i = copyLength; i < dataLength; i++) {
-                buffer.put((byte) 0);
-            }
-        } else {
-            // Fill with test pattern
-            for (int i = 0; i < dataLength; i++) {
-                buffer.put((byte) (i % 256));
-            }
-        }
-        
-        // Operational Control Field (OCF) - 4 bytes
-        // Contains CLCW (Command Link Control Word) for command acknowledgment
-        // CLCW Structure (32 bits):
-        // - Type (1 bit) = 0 (Type-1 report)
-        // - Version (2 bits) = 00
-        // - Status Field (3 bits) = 000 (nominal)
-        // - COP in Effect (2 bits) = 00
-        // - Virtual Channel ID (6 bits) = virtualChannelId
-        // - Spare (2 bits) = 00
-        // - No RF Available (1 bit) = 0
-        // - No Bit Lock (1 bit) = 0
-        // - Lockout (1 bit) = 0
-        // - Wait (1 bit) = 0
-        // - Retransmit (1 bit) = 0
-        // - FarmB Counter (2 bits) = 00
-        // - Spare (1 bit) = 0
-        // - Report Value (8 bits) = last command frame count acknowledged
-        
+        // Build CLCW for OCF
         int clcw = (lastCommandReceived >= 0) ?
                 CLCWEncoder.encode(virtualChannelId, lastCommandReceived) :
                 CLCWEncoder.encode(virtualChannelId, 0);
         
-        buffer.putInt(clcw);
-        
-        // Frame Error Control Field (FECF) - 2 bytes CRC-16
-        // Use library utility for CRC-16 calculation
-        byte[] frameWithoutFECF = new byte[FRAME_SIZE - FECF_SIZE];
-        buffer.position(0);
-        buffer.get(frameWithoutFECF);
-        int crc = CRC16Calculator.calculate(frameWithoutFECF);
-        buffer.putShort((short) crc);
-        
-        return buffer.array();
+        // Use library utility to build complete frame
+        return esa.sle.ccsds.utils.frames.TelemetryFrameBuilder.builder()
+                .setSpacecraftId(spacecraftId)
+                .setVirtualChannelId(virtualChannelId)
+                .setFrameCount(frameCount)
+                .setData(payload)
+                .setOcf(clcw)
+                .setFrameSize(FRAME_SIZE)
+                .build();
     }
     
     public byte[] getData() {

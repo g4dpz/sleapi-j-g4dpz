@@ -1,6 +1,5 @@
 package esa.sle.demo.common;
 
-import esa.sle.ccsds.utils.crc.CRC16Calculator;
 import esa.sle.ccsds.utils.frames.FrameHeader;
 import esa.sle.ccsds.utils.frames.FrameHeaderParser;
 
@@ -68,42 +67,14 @@ public class CommandFrame {
     }
     
     private byte[] buildFrame() {
-        ByteBuffer buffer = ByteBuffer.allocate(FRAME_SIZE);
-        
-        // Primary Header (6 bytes)
-        // Version (2 bits) + Spacecraft ID (10 bits) + Virtual Channel ID (3 bits) + Reserved (1 bit)
-        int word1 = (0 << 14) | ((spacecraftId & 0x3FF) << 4) | ((virtualChannelId & 0x7) << 1) | 0;
-        buffer.putShort((short) word1);
-        
-        // Master Channel Frame Count (8 bits) + Virtual Channel Frame Count (8 bits)
-        buffer.put((byte) (frameCount >> 8));
-        buffer.put((byte) (frameCount & 0xFF));
-        
-        // Transfer Frame Data Field Status (16 bits)
-        buffer.putShort((short) 0x8000); // Command frame indicator
-        
-        // Data Field - Command string
-        byte[] commandBytes = command.getBytes();
-        int dataLength = FRAME_SIZE - HEADER_SIZE - FECF_SIZE;
-        
-        // Copy command
-        int copyLength = Math.min(commandBytes.length, dataLength);
-        buffer.put(commandBytes, 0, copyLength);
-        
-        // Pad with zeros
-        for (int i = copyLength; i < dataLength; i++) {
-            buffer.put((byte) 0);
-        }
-        
-        // Frame Error Control Field (FECF) - 2 bytes CRC-16
-        // Use library utility for CRC-16 calculation
-        byte[] frameWithoutFECF = new byte[FRAME_SIZE - FECF_SIZE];
-        buffer.position(0);
-        buffer.get(frameWithoutFECF);
-        int crc = CRC16Calculator.calculate(frameWithoutFECF);
-        buffer.putShort((short) crc);
-        
-        return buffer.array();
+        // Use library utility to build complete frame
+        return esa.sle.ccsds.utils.frames.CommandFrameBuilder.builder()
+                .setSpacecraftId(spacecraftId)
+                .setVirtualChannelId(virtualChannelId)
+                .setFrameCount(frameCount)
+                .setData(command.getBytes())
+                .setFrameSize(FRAME_SIZE)
+                .build();
     }
     
     public byte[] getData() {
