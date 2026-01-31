@@ -52,11 +52,13 @@ echo "                    SLE DEMO - AUTOMATED TEST SCRIPT"
 echo "================================================================================"
 echo ""
 echo "This script will:"
-echo "  1. Build the parent SLE API and demo"
+echo "  1. Build the demo"
 echo "  2. Start all three components (Ground Station, Spacecraft, MOC)"
 echo "  3. Run for ${TEST_DURATION} seconds"
 echo "  4. Validate results"
 echo "  5. Generate test report"
+echo ""
+echo "Note: Assumes parent SLE API is already built"
 echo ""
 echo "Test Duration: ${TEST_DURATION} seconds"
 echo "Expected Frames: At least ${MIN_FRAMES}"
@@ -93,24 +95,10 @@ echo "✓ Java version: $(java -version 2>&1 | head -1)"
 echo "✓ Maven version: $(mvn -version | head -1)"
 echo ""
 
-# Step 2: Build parent SLE API
-echo -e "${BLUE}[2/7] Building parent SLE Java API...${NC}"
+# Step 2: Build demo (skip parent - assumes already built)
+echo -e "${BLUE}[2/7] Building demo...${NC}"
 echo ""
 
-cd ..
-if mvn clean install -DskipTests -q; then
-    echo -e "${GREEN}✓ Parent SLE API built successfully${NC}"
-else
-    echo -e "${RED}✗ Failed to build parent SLE API${NC}"
-    exit 1
-fi
-echo ""
-
-# Step 3: Build demo
-echo -e "${BLUE}[3/7] Building demo...${NC}"
-echo ""
-
-cd demo
 if mvn clean package -q; then
     echo -e "${GREEN}✓ Demo built successfully${NC}"
 else
@@ -131,8 +119,8 @@ echo "✓ JAR files created:"
 ls -lh target/sle-demo-*.jar | awk '{print "  " $9 " (" $5 ")"}'
 echo ""
 
-# Step 4: Start Ground Station
-echo -e "${BLUE}[4/7] Starting Ground Station...${NC}"
+# Step 3: Start Ground Station
+echo -e "${BLUE}[3/7] Starting Ground Station...${NC}"
 echo ""
 
 java -jar target/sle-demo-1.0.0-groundstation.jar > "$LOG_DIR/groundstation.log" 2>&1 &
@@ -159,8 +147,8 @@ else
 fi
 echo ""
 
-# Step 5: Start Spacecraft
-echo -e "${BLUE}[5/7] Starting Spacecraft Simulator...${NC}"
+# Step 4: Start Spacecraft
+echo -e "${BLUE}[4/7] Starting Spacecraft Simulator...${NC}"
 echo ""
 
 java -jar target/sle-demo-1.0.0-spacecraft.jar > "$LOG_DIR/spacecraft.log" 2>&1 &
@@ -185,8 +173,8 @@ else
 fi
 echo ""
 
-# Step 6: Start MOC
-echo -e "${BLUE}[6/7] Starting MOC Client...${NC}"
+# Step 5: Start MOC
+echo -e "${BLUE}[5/7] Starting MOC Client...${NC}"
 echo ""
 
 java -jar target/sle-demo-1.0.0-moc.jar > "$LOG_DIR/moc.log" 2>&1 &
@@ -211,10 +199,12 @@ else
 fi
 echo ""
 
-# Step 7: Monitor and validate
-echo -e "${BLUE}[7/7] Running test for ${TEST_DURATION} seconds...${NC}"
+# Step 6: Monitor and validate
+echo -e "${BLUE}[6/7] Running test for ${TEST_DURATION} seconds...${NC}"
 echo ""
-echo "Monitoring telemetry flow..."
+echo "Monitoring telemetry flow and automated commands..."
+echo "  - Frame 10: DEPLOY_SOLAR_PANELS will be sent"
+echo "  - Frame 20: ACTIVATE_ANTENNA will be sent"
 echo ""
 
 # Show live progress
@@ -244,10 +234,10 @@ echo "==========================================================================
 echo ""
 
 # Count frames
-SC_FRAMES=$(grep -c "Sent: TM Frame" "$LOG_DIR/spacecraft.log" 2>/dev/null || echo "0")
-GS_RX_FRAMES=$(grep -c "Received frame #" "$LOG_DIR/groundstation.log" 2>/dev/null || echo "0")
-GS_TX_FRAMES=$(grep -c "Forwarded frame #" "$LOG_DIR/groundstation.log" 2>/dev/null || echo "0")
-MOC_FRAMES=$(grep -c "Frame #" "$LOG_DIR/moc.log" 2>/dev/null || echo "0")
+SC_FRAMES=$(grep "Sent TM frame" "$LOG_DIR/spacecraft.log" 2>/dev/null | grep -c "." || echo "0")
+GS_RX_FRAMES=$(grep "\[DOWNLINK\] RX TM frame" "$LOG_DIR/groundstation.log" 2>/dev/null | grep -c "." || echo "0")
+GS_TX_FRAMES=$(grep "\[RAF\] TX TM frame" "$LOG_DIR/groundstation.log" 2>/dev/null | grep -c "." || echo "0")
+MOC_FRAMES=$(grep "Frame #" "$LOG_DIR/moc.log" 2>/dev/null | grep -c "." || echo "0")
 
 # Extract and display CCSDS frame structure from first frame
 echo "CCSDS Frame Structure (Frame #1):"
@@ -299,6 +289,16 @@ echo ""
 # Sample telemetry data
 echo "Sample Telemetry (last 3 frames):"
 tail -3 "$LOG_DIR/moc.log" | grep "Frame #" | sed 's/^/  /'
+echo ""
+
+# Commands sent
+COMMANDS_SENT=$(grep -c "Sent command" "$LOG_DIR/moc.log" 2>/dev/null || echo "0")
+echo "Commands Sent: $COMMANDS_SENT"
+echo ""
+
+# Automated command sequence
+echo "Automated Command Sequence:"
+grep "Sent command" "$LOG_DIR/moc.log" 2>/dev/null | sed 's/^/  /' || echo "  No commands found"
 echo ""
 
 # Validate results

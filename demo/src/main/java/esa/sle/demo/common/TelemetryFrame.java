@@ -19,12 +19,18 @@ public class TelemetryFrame {
     private final int frameCount;
     private final byte[] data;
     private final Instant timestamp;
+    private int lastCommandReceived = -1;  // For CLCW report value
     
     public TelemetryFrame(int spacecraftId, int virtualChannelId, int frameCount, byte[] payload) {
+        this(spacecraftId, virtualChannelId, frameCount, payload, -1);
+    }
+    
+    public TelemetryFrame(int spacecraftId, int virtualChannelId, int frameCount, byte[] payload, int commandAck) {
         this.spacecraftId = spacecraftId;
         this.virtualChannelId = virtualChannelId;
         this.frameCount = frameCount;
         this.timestamp = Instant.now();
+        this.lastCommandReceived = commandAck;
         this.data = buildFrame(payload);
     }
     
@@ -66,22 +72,34 @@ public class TelemetryFrame {
         }
         
         // Operational Control Field (OCF) - 4 bytes
-        // Contains CLCW (Command Link Control Word) for return channel
-        // Type (1 bit) = 0 (Type-1 report)
-        // Version (2 bits) = 00
-        // Status Field (3 bits) = 000
-        // COP in Effect (2 bits) = 00
-        // Virtual Channel ID (6 bits) = virtualChannelId
-        // Spare (2 bits) = 00
-        // No RF Available (1 bit) = 0
-        // No Bit Lock (1 bit) = 0
-        // Lockout (1 bit) = 0
-        // Wait (1 bit) = 0
-        // Retransmit (1 bit) = 0
-        // FarmB Counter (2 bits) = 00
-        // Spare (1 bit) = 0
-        // Report Value (8 bits) = frameCount & 0xFF
-        buffer.putInt(((virtualChannelId & 0x3F) << 24) | ((frameCount & 0xFF) << 8));
+        // Contains CLCW (Command Link Control Word) for command acknowledgment
+        // CLCW Structure (32 bits):
+        // - Type (1 bit) = 0 (Type-1 report)
+        // - Version (2 bits) = 00
+        // - Status Field (3 bits) = 000 (nominal)
+        // - COP in Effect (2 bits) = 00
+        // - Virtual Channel ID (6 bits) = virtualChannelId
+        // - Spare (2 bits) = 00
+        // - No RF Available (1 bit) = 0
+        // - No Bit Lock (1 bit) = 0
+        // - Lockout (1 bit) = 0
+        // - Wait (1 bit) = 0
+        // - Retransmit (1 bit) = 0
+        // - FarmB Counter (2 bits) = 00
+        // - Spare (1 bit) = 0
+        // - Report Value (8 bits) = last command frame count acknowledged
+        
+        int clcw = 0;
+        
+        // Set VCID (bits 8-13)
+        clcw |= (virtualChannelId & 0x3F) << 18;
+        
+        // Set Report Value (bits 24-31) - last command frame count received
+        if (lastCommandReceived >= 0) {
+            clcw |= (lastCommandReceived & 0xFF);
+        }
+        
+        buffer.putInt(clcw);
         
         // Frame Error Control Field (FECF) - 2 bytes CRC-16
         // Calculate CRC-16-CCITT over entire frame (excluding FECF itself)

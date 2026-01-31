@@ -1,35 +1,42 @@
 package esa.sle.demo.moc;
 
+import esa.sle.demo.common.CommandFrame;
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Mission Operations Center (MOC) Client
- * Receives telemetry frames from Ground Station via SLE RAF service
+ * Mission Operations Center (MOC) Client - Bidirectional
+ * Receives telemetry via RAF and sends commands via FSP
  */
 public class MOCClient {
     
+    private static final int SPACECRAFT_ID = 185;
+    private static final int VIRTUAL_CHANNEL_ID = 0;
     private static final String GROUND_STATION_HOST = "localhost";
-    private static final int GROUND_STATION_PORT = 5556;
+    private static final int RAF_PORT = 5556;  // Receive TM
+    private static final int FSP_PORT = 5558;  // Send TC
     private static final int FRAME_SIZE = 1115;
-    private static final DateTimeFormatter TIME_FORMATTER = 
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
     
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean fspConnected = new AtomicBoolean(false);
     private final AtomicInteger framesReceived = new AtomicInteger(0);
+    private final AtomicInteger commandsSent = new AtomicInteger(0);
     private final AtomicInteger dataVolume = new AtomicInteger(0);
+    
+    private Socket fspSocket;
+    private OutputStream commandOutput;
     
     public static void main(String[] args) {
         MOCClient client = new MOCClient();
         
-        // Add shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n[MOC] Shutting down...");
             client.stop();
@@ -42,17 +49,45 @@ public class MOCClient {
     public void start() {
         running.set(true);
         System.out.println("=".repeat(80));
-        System.out.println("MISSION OPERATIONS CENTER (MOC) CLIENT");
+        System.out.println("MISSION OPERATIONS CENTER (MOC) CLIENT - AUTOMATED DEMO");
         System.out.println("=".repeat(80));
-        System.out.println("Ground Station: " + GROUND_STATION_HOST + ":" + GROUND_STATION_PORT);
-        System.out.println("Service: RAF (Return All Frames)");
+        System.out.println("Ground Station: " + GROUND_STATION_HOST);
+        System.out.println("RAF Service (TM): Port " + RAF_PORT);
+        System.out.println("FSP Service (TC): Port " + FSP_PORT);
+        System.out.println("=".repeat(80));
+        System.out.println();
+        System.out.println("Automated Command Sequence:");
+        System.out.println("  Frame 10: DEPLOY_SOLAR_PANELS");
+        System.out.println("  Frame 20: ACTIVATE_ANTENNA");
         System.out.println("=".repeat(80));
         System.out.println();
         
+        // Start telemetry receiver thread
+        Thread rafThread = new Thread(this::handleTelemetry, "RAF-Receiver");
+        rafThread.start();
+        
+        // Start command sender thread
+        Thread fspThread = new Thread(this::handleCommands, "FSP-Sender");
+        fspThread.start();
+        
+        try {
+            rafThread.join();
+            fspThread.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        System.out.println("[MOC] Stopped");
+    }
+    
+    /**
+     * Receive telemetry frames via RAF service
+     */
+    private void handleTelemetry() {
         while (running.get()) {
-            try (Socket socket = new Socket(GROUND_STATION_HOST, GROUND_STATION_PORT)) {
-                System.out.println("[MOC] Connected to Ground Station");
-                System.out.println("[MOC] Receiving telemetry frames...");
+            try (Socket socket = new Socket(GROUND_STATION_HOST, RAF_PORT)) {
+                System.out.println("[RAF] Connected to Ground Station");
+                System.out.println("[RAF] Receiving telemetry frames...");
                 System.out.println("-".repeat(80));
                 
                 InputStream in = socket.getInputStream();
@@ -62,20 +97,16 @@ public class MOCClient {
                     int bytesRead = 0;
                     while (bytesRead < FRAME_SIZE) {
                         int read = in.read(buffer, bytesRead, FRAME_SIZE - bytesRead);
-                        if (read == -1) {
-                            throw new IOException("Connection closed");
-                        }
+                        if (read == -1) throw new IOException("Connection closed");
                         bytesRead += read;
                     }
                     
-                    // Process received frame
                     processFrame(buffer);
                 }
-                
             } catch (IOException e) {
                 if (running.get()) {
-                    System.err.println("[MOC] Connection error: " + e.getMessage());
-                    System.out.println("[MOC] Retrying in 5 seconds...");
+                    System.err.println("[RAF] Connection error: " + e.getMessage());
+                    System.out.println("[RAF] Retrying in 5 seconds...");
                     try {
                         Thread.sleep(5000);
                     } catch (InterruptedException ie) {
@@ -84,10 +115,79 @@ public class MOCClient {
                 }
             }
         }
-        
-        System.out.println("[MOC] Stopped");
     }
     
+    /**
+     * Send commands via FSP service
+     */
+    private void handleCommands() {
+        // Wait for RAF to connect first
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            return;
+        }
+        
+        // Connect to FSP service
+        while (running.get() && fspSocket == null) {
+            try {
+                fspSocket = new Socket(GROUND_STATION_HOST, FSP_PORT);
+                commandOutput = fspSocket.getOutputStream();
+                fspConnected.set(true);
+                System.out.println("[FSP] Connected to Ground Station");
+                System.out.println("[FSP] Automated command sequence enabled");
+                System.out.println("-".repeat(80));
+            } catch (IOException e) {
+                System.err.println("[FSP] Connection failed, retrying...");
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ie) {
+                    return;
+                }
+            }
+        }
+        
+        // Keep connection alive
+        try {
+            while (running.get() && fspSocket != null && !fspSocket.isClosed()) {
+                Thread.sleep(100);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+    
+    /**
+     * Send command to spacecraft
+     */
+    private void sendCommand(String command) {
+        try {
+            if (!fspConnected.get() || commandOutput == null) {
+                System.out.println("[FSP] Not connected yet, command skipped: " + command);
+                return;
+            }
+            
+            CommandFrame cmdFrame = new CommandFrame(
+                    SPACECRAFT_ID,
+                    VIRTUAL_CHANNEL_ID,
+                    commandsSent.get(),
+                    command
+            );
+            
+            commandOutput.write(cmdFrame.getData());
+            commandOutput.flush();
+            
+            commandsSent.incrementAndGet();
+            System.out.printf("[FSP] Sent command #%d: %s%n", commandsSent.get(), command);
+            
+        } catch (IOException e) {
+            System.err.println("[FSP] Failed to send command: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Process received telemetry frame
+     */
     private void processFrame(byte[] frameData) {
         int frameNum = framesReceived.incrementAndGet();
         dataVolume.addAndGet(frameData.length);
@@ -95,31 +195,27 @@ public class MOCClient {
         // Parse frame header
         ByteBuffer buffer = ByteBuffer.wrap(frameData);
         
-        // Primary Header (6 bytes)
         short word1 = buffer.getShort();
-        int version = (word1 >> 14) & 0x3;
         int spacecraftId = (word1 >> 4) & 0x3FF;
         int virtualChannelId = (word1 >> 1) & 0x7;
-        int ocfFlag = word1 & 0x1;
         
         byte mcFrameCount = buffer.get();
         byte vcFrameCount = buffer.get();
         int frameCount = ((mcFrameCount & 0xFF) << 8) | (vcFrameCount & 0xFF);
         
-        short dataFieldStatus = buffer.getShort();
+        buffer.getShort(); // Skip data field status
         
-        // Dump first frame in hex with section descriptions
+        // Dump first frame structure
         if (frameNum == 1) {
             dumpFrameHex(frameData);
         }
         
-        // Extract message from data field (skip header, OCF, FECF)
+        // Extract message from data field
         int dataStart = 6;
-        int dataEnd = frameData.length - 6; // Exclude OCF (4) + FECF (2)
+        int dataEnd = frameData.length - 6;
         byte[] dataField = new byte[dataEnd - dataStart];
         System.arraycopy(frameData, dataStart, dataField, 0, dataField.length);
         
-        // Convert to string (find null terminator)
         int messageLength = 0;
         for (int i = 0; i < dataField.length; i++) {
             if (dataField[i] == 0) {
@@ -131,45 +227,54 @@ public class MOCClient {
         
         String message = new String(dataField, 0, messageLength);
         
-        // Display frame information
-        System.out.printf("[MOC] Frame #%d | SCID=%d VCID=%d Count=%d | Message: %s%n",
-                frameNum,
-                spacecraftId,
-                virtualChannelId,
-                frameCount,
-                message
-        );
+        // Decode CLCW from OCF (bytes 1109-1112)
+        int ocfStart = frameData.length - 6;
+        buffer.position(ocfStart);
+        int clcw = buffer.getInt();
         
-        // Print statistics every 10 frames
+        // Extract CLCW fields
+        int clcwVCID = (clcw >> 18) & 0x3F;
+        int clcwReportValue = clcw & 0xFF;
+        
+        // Display frame with CLCW acknowledgment
+        String clcwInfo = (clcwReportValue >= 0) ? 
+                String.format("CLCW_ACK=%d", clcwReportValue) : "CLCW_ACK=NONE";
+        
+        System.out.printf("[RAF] Frame #%d | SCID=%d VCID=%d Count=%d | %s | %s%n",
+                frameNum, spacecraftId, virtualChannelId, frameCount, clcwInfo, message);
+        
+        // Automated command sequence
+        if (frameNum == 10) {
+            System.out.println("\n" + "=".repeat(80));
+            System.out.println("[AUTO] Triggering command at frame 10...");
+            System.out.println("=".repeat(80));
+            sendCommand("DEPLOY_SOLAR_PANELS");
+        } else if (frameNum == 20) {
+            System.out.println("\n" + "=".repeat(80));
+            System.out.println("[AUTO] Triggering command at frame 20...");
+            System.out.println("=".repeat(80));
+            sendCommand("ACTIVATE_ANTENNA");
+        }
+        
         if (frameNum % 10 == 0) {
             System.out.println("-".repeat(80));
-            System.out.printf("[MOC] Statistics: %d frames received, %.2f KB total%n",
-                    frameNum, dataVolume.get() / 1024.0);
+            System.out.printf("[RAF] Statistics: %d frames RX, %d commands TX, %.2f KB%n",
+                    frameNum, commandsSent.get(), dataVolume.get() / 1024.0);
             System.out.println("-".repeat(80));
         }
     }
     
     private void dumpFrameHex(byte[] frameData) {
-        // Calculate field positions
         int headerEnd = 6;
         int ocfStart = frameData.length - 6;
         int fecfStart = frameData.length - 2;
         
-        // Build hex string with pipe separators
         StringBuilder hex = new StringBuilder();
-        
-        // Primary Header (6 bytes) - 3 fields separated by |
         hex.append(formatHexBytes(frameData, 0, 2)).append(" | ");
         hex.append(formatHexBytes(frameData, 2, 2)).append(" | ");
         hex.append(formatHexBytes(frameData, 4, 2)).append(" | ");
-        
-        // Data Field - show first 32 bytes
         hex.append(formatHexBytes(frameData, headerEnd, 32)).append(" ... | ");
-        
-        // OCF (4 bytes)
         hex.append(formatHexBytes(frameData, ocfStart, 4)).append(" | ");
-        
-        // FECF (2 bytes)
         hex.append(formatHexBytes(frameData, fecfStart, 2));
         
         System.out.println("\n" + "=".repeat(80));
@@ -177,34 +282,13 @@ public class MOCClient {
         System.out.println(hex.toString());
         System.out.println();
         System.out.println("FIELD DEFINITIONS:");
-        System.out.println("  [0-1]   0B 91       | Primary Header: Version+SCID+VCID+OCF_Flag");
-        System.out.println("  [2-3]   00 00       | Primary Header: Frame Counts");
-        System.out.println("  [4-5]   40 00       | Primary Header: Data Field Status");
-        System.out.println("  [6-1108] ...        | Data Field (1103 bytes)");
-        System.out.println("  [1109-1112] ...     | OCF - Operational Control Field (CLCW)");
-        System.out.println("  [1113-1114] ...     | FECF - Frame Error Control (CRC-16)");
+        System.out.println("  [0-1]   Header: Version+SCID+VCID+OCF_Flag");
+        System.out.println("  [2-3]   Header: Frame Counts");
+        System.out.println("  [4-5]   Header: Data Field Status");
+        System.out.println("  [6-1108] Data Field (1103 bytes)");
+        System.out.println("  [1109-1112] OCF - Operational Control Field");
+        System.out.println("  [1113-1114] FECF - Frame Error Control (CRC-16)");
         System.out.println("=".repeat(80) + "\n");
-    }
-    
-    /**
-     * Calculate CRC-16-CCITT for verification
-     */
-    private int calculateCRC16(byte[] data) {
-        int crc = 0xFFFF;
-        int polynomial = 0x1021;
-        
-        for (byte b : data) {
-            crc ^= (b & 0xFF) << 8;
-            for (int i = 0; i < 8; i++) {
-                if ((crc & 0x8000) != 0) {
-                    crc = (crc << 1) ^ polynomial;
-                } else {
-                    crc = crc << 1;
-                }
-            }
-        }
-        
-        return crc & 0xFFFF;
     }
     
     private String formatHexBytes(byte[] data, int offset, int length) {
@@ -223,15 +307,21 @@ public class MOCClient {
         System.out.println("MOC SESSION STATISTICS");
         System.out.println("=".repeat(80));
         System.out.printf("Total Frames Received: %d%n", framesReceived.get());
+        System.out.printf("Total Commands Sent: %d%n", commandsSent.get());
         System.out.printf("Total Data Volume: %.2f KB (%.2f MB)%n",
                 dataVolume.get() / 1024.0,
                 dataVolume.get() / (1024.0 * 1024.0));
-        System.out.printf("Average Frame Size: %.2f bytes%n",
-                framesReceived.get() > 0 ? (double) dataVolume.get() / framesReceived.get() : 0);
         System.out.println("=".repeat(80));
     }
     
     public void stop() {
         running.set(false);
+        if (fspSocket != null) {
+            try {
+                fspSocket.close();
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
     }
 }

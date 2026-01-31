@@ -1,34 +1,45 @@
 package esa.sle.demo.groundstation;
 
-import esa.sle.demo.common.TelemetryFrame;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Ground Station Server
- * Receives telemetry frames from spacecraft and provides them via SLE RAF service to MOC
+ * Ground Station Server - Bidirectional
+ * DOWNLINK: Spacecraft → Ground Station → MOC (TM frames via RAF)
+ * UPLINK: MOC → Ground Station → Spacecraft (TC frames via FSP)
  */
 public class GroundStationServer {
     
-    private static final int SPACECRAFT_PORT = 5555;
-    private static final int SLE_PORT = 5556;
+    // Downlink ports (TM frames)
+    private static final int SPACECRAFT_DOWNLINK_PORT = 5555;
+    private static final int MOC_RAF_PORT = 5556;
+    
+    // Uplink ports (TC frames)
+    private static final int MOC_FSP_PORT = 5558;
+    private static final int SPACECRAFT_UPLINK_PORT = 5557;
+    
     private static final int FRAME_SIZE = 1115;
+    private static final int BUFFER_SIZE = 1000;
     
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private final BlockingQueue<byte[]> frameQueue = new LinkedBlockingQueue<>(1000);
-    private ServerSocket spacecraftSocket;
-    private ServerSocket sleSocket;
+    private final BlockingQueue<byte[]> telemetryBuffer = new LinkedBlockingQueue<>(BUFFER_SIZE);
+    private final BlockingQueue<byte[]> commandBuffer = new LinkedBlockingQueue<>(BUFFER_SIZE);
+    
+    private ServerSocket spacecraftDownlinkSocket;
+    private ServerSocket spacecraftUplinkSocket;
+    private ServerSocket mocRafSocket;
+    private ServerSocket mocFspSocket;
     
     public static void main(String[] args) {
         GroundStationServer server = new GroundStationServer();
         
-        // Add shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n[GROUND STATION] Shutting down...");
             server.stop();
@@ -40,25 +51,34 @@ public class GroundStationServer {
     public void start() {
         running.set(true);
         System.out.println("=".repeat(80));
-        System.out.println("GROUND STATION SERVER");
+        System.out.println("GROUND STATION SERVER - BIDIRECTIONAL");
         System.out.println("=".repeat(80));
-        System.out.println("Spacecraft Port: " + SPACECRAFT_PORT);
-        System.out.println("SLE Service Port: " + SLE_PORT);
-        System.out.println("Frame Queue Size: " + frameQueue.remainingCapacity());
+        System.out.println("DOWNLINK (Telemetry):");
+        System.out.println("  Spacecraft Port: " + SPACECRAFT_DOWNLINK_PORT + " (receive TM)");
+        System.out.println("  MOC RAF Port: " + MOC_RAF_PORT + " (forward TM)");
+        System.out.println("UPLINK (Commands):");
+        System.out.println("  MOC FSP Port: " + MOC_FSP_PORT + " (receive TC)");
+        System.out.println("  Spacecraft Port: " + SPACECRAFT_UPLINK_PORT + " (forward TC)");
+        System.out.println("Buffer Size: " + BUFFER_SIZE + " frames each");
         System.out.println("=".repeat(80));
         System.out.println();
         
-        // Start spacecraft receiver thread
-        Thread spacecraftThread = new Thread(this::receiveFromSpacecraft, "Spacecraft-Receiver");
-        spacecraftThread.start();
+        // Start all four server threads
+        Thread spacecraftDownlinkThread = new Thread(this::handleSpacecraftDownlink, "SC-Downlink");
+        Thread spacecraftUplinkThread = new Thread(this::handleSpacecraftUplink, "SC-Uplink");
+        Thread mocRafThread = new Thread(this::handleMocRaf, "MOC-RAF");
+        Thread mocFspThread = new Thread(this::handleMocFsp, "MOC-FSP");
         
-        // Start SLE service thread
-        Thread sleThread = new Thread(this::serveSLE, "SLE-Service");
-        sleThread.start();
+        spacecraftDownlinkThread.start();
+        spacecraftUplinkThread.start();
+        mocRafThread.start();
+        mocFspThread.start();
         
         try {
-            spacecraftThread.join();
-            sleThread.join();
+            spacecraftDownlinkThread.join();
+            spacecraftUplinkThread.join();
+            mocRafThread.join();
+            mocFspThread.join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -66,14 +86,17 @@ public class GroundStationServer {
         System.out.println("[GROUND STATION] Stopped");
     }
     
-    private void receiveFromSpacecraft() {
+    /**
+     * Receive telemetry frames from spacecraft
+     */
+    private void handleSpacecraftDownlink() {
         try {
-            spacecraftSocket = new ServerSocket(SPACECRAFT_PORT);
-            System.out.println("[GROUND STATION] Listening for spacecraft on port " + SPACECRAFT_PORT);
+            spacecraftDownlinkSocket = new ServerSocket(SPACECRAFT_DOWNLINK_PORT);
+            System.out.println("[DOWNLINK] Listening for spacecraft on port " + SPACECRAFT_DOWNLINK_PORT);
             
             while (running.get()) {
-                try (Socket client = spacecraftSocket.accept()) {
-                    System.out.println("[GROUND STATION] Spacecraft connected: " + client.getRemoteSocketAddress());
+                try (Socket client = spacecraftDownlinkSocket.accept()) {
+                    System.out.println("[DOWNLINK] Spacecraft connected: " + client.getRemoteSocketAddress());
                     
                     InputStream in = client.getInputStream();
                     byte[] buffer = new byte[FRAME_SIZE];
@@ -83,82 +106,167 @@ public class GroundStationServer {
                         int bytesRead = 0;
                         while (bytesRead < FRAME_SIZE) {
                             int read = in.read(buffer, bytesRead, FRAME_SIZE - bytesRead);
-                            if (read == -1) {
-                                throw new IOException("Connection closed");
-                            }
+                            if (read == -1) throw new IOException("Connection closed");
                             bytesRead += read;
                         }
                         
-                        // Queue frame for SLE service
                         byte[] frame = new byte[FRAME_SIZE];
                         System.arraycopy(buffer, 0, frame, 0, FRAME_SIZE);
                         
-                        if (frameQueue.offer(frame)) {
+                        if (telemetryBuffer.offer(frame)) {
                             frameCount++;
-                            System.out.printf("[GROUND STATION] Received frame #%d from spacecraft (Queue: %d)%n",
-                                    frameCount, frameQueue.size());
+                            System.out.printf("[DOWNLINK] RX TM frame #%d (Queue: %d)%n",
+                                    frameCount, telemetryBuffer.size());
                         } else {
-                            System.err.println("[GROUND STATION] Frame queue full! Dropping frame.");
+                            System.err.println("[DOWNLINK] Telemetry buffer full! Dropping frame.");
                         }
                     }
-                    
                 } catch (IOException e) {
                     if (running.get()) {
-                        System.err.println("[GROUND STATION] Spacecraft connection error: " + e.getMessage());
-                        System.out.println("[GROUND STATION] Waiting for spacecraft reconnection...");
+                        System.err.println("[DOWNLINK] Error: " + e.getMessage());
+                        Thread.sleep(1000);
                     }
                 }
             }
-            
-        } catch (IOException e) {
-            System.err.println("[GROUND STATION] Failed to start spacecraft receiver: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("[DOWNLINK] Failed to start: " + e.getMessage());
         } finally {
-            closeSocket(spacecraftSocket);
+            closeSocket(spacecraftDownlinkSocket);
         }
     }
     
-    private void serveSLE() {
+    /**
+     * Forward telemetry frames to MOC via RAF service
+     */
+    private void handleMocRaf() {
         try {
-            sleSocket = new ServerSocket(SLE_PORT);
-            System.out.println("[GROUND STATION] SLE RAF service listening on port " + SLE_PORT);
+            mocRafSocket = new ServerSocket(MOC_RAF_PORT);
+            System.out.println("[RAF] SLE RAF service listening on port " + MOC_RAF_PORT);
             
             while (running.get()) {
-                try (Socket client = sleSocket.accept()) {
-                    System.out.println("[GROUND STATION] MOC connected: " + client.getRemoteSocketAddress());
+                try (Socket client = mocRafSocket.accept()) {
+                    System.out.println("[RAF] MOC connected: " + client.getRemoteSocketAddress());
                     
-                    var out = client.getOutputStream();
+                    OutputStream out = client.getOutputStream();
                     int framesSent = 0;
                     
                     while (running.get() && !client.isClosed()) {
-                        // Get frame from queue (blocking with timeout)
-                        byte[] frame = frameQueue.poll(1, java.util.concurrent.TimeUnit.SECONDS);
+                        byte[] frame = telemetryBuffer.poll(1, TimeUnit.SECONDS);
                         
                         if (frame != null) {
-                            // Send frame to MOC
                             out.write(frame);
                             out.flush();
                             framesSent++;
-                            
-                            System.out.printf("[GROUND STATION] Forwarded frame #%d to MOC (Queue: %d)%n",
-                                    framesSent, frameQueue.size());
+                            System.out.printf("[RAF] TX TM frame #%d to MOC (Queue: %d)%n",
+                                    framesSent, telemetryBuffer.size());
                         }
                     }
-                    
                 } catch (IOException e) {
                     if (running.get()) {
-                        System.err.println("[GROUND STATION] MOC connection error: " + e.getMessage());
-                        System.out.println("[GROUND STATION] Waiting for MOC reconnection...");
+                        System.err.println("[RAF] Error: " + e.getMessage());
+                        Thread.sleep(1000);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
-            
-        } catch (IOException e) {
-            System.err.println("[GROUND STATION] Failed to start SLE service: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("[RAF] Failed to start: " + e.getMessage());
         } finally {
-            closeSocket(sleSocket);
+            closeSocket(mocRafSocket);
+        }
+    }
+    
+    /**
+     * Receive command frames from MOC via FSP service
+     */
+    private void handleMocFsp() {
+        try {
+            mocFspSocket = new ServerSocket(MOC_FSP_PORT);
+            System.out.println("[FSP] SLE FSP service listening on port " + MOC_FSP_PORT);
+            
+            while (running.get()) {
+                try (Socket client = mocFspSocket.accept()) {
+                    System.out.println("[FSP] MOC connected: " + client.getRemoteSocketAddress());
+                    
+                    InputStream in = client.getInputStream();
+                    byte[] buffer = new byte[FRAME_SIZE];
+                    int frameCount = 0;
+                    
+                    while (running.get()) {
+                        int bytesRead = 0;
+                        while (bytesRead < FRAME_SIZE) {
+                            int read = in.read(buffer, bytesRead, FRAME_SIZE - bytesRead);
+                            if (read == -1) throw new IOException("Connection closed");
+                            bytesRead += read;
+                        }
+                        
+                        byte[] frame = new byte[FRAME_SIZE];
+                        System.arraycopy(buffer, 0, frame, 0, FRAME_SIZE);
+                        
+                        if (commandBuffer.offer(frame)) {
+                            frameCount++;
+                            System.out.printf("[FSP] RX TC frame #%d from MOC (Queue: %d)%n",
+                                    frameCount, commandBuffer.size());
+                        } else {
+                            System.err.println("[FSP] Command buffer full! Dropping frame.");
+                        }
+                    }
+                } catch (IOException e) {
+                    if (running.get()) {
+                        System.err.println("[FSP] Error: " + e.getMessage());
+                        Thread.sleep(1000);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[FSP] Failed to start: " + e.getMessage());
+        } finally {
+            closeSocket(mocFspSocket);
+        }
+    }
+    
+    /**
+     * Forward command frames to spacecraft via uplink
+     */
+    private void handleSpacecraftUplink() {
+        try {
+            spacecraftUplinkSocket = new ServerSocket(SPACECRAFT_UPLINK_PORT);
+            System.out.println("[UPLINK] Listening for spacecraft on port " + SPACECRAFT_UPLINK_PORT);
+            
+            while (running.get()) {
+                try (Socket client = spacecraftUplinkSocket.accept()) {
+                    System.out.println("[UPLINK] Spacecraft connected: " + client.getRemoteSocketAddress());
+                    
+                    OutputStream out = client.getOutputStream();
+                    int framesSent = 0;
+                    
+                    while (running.get() && !client.isClosed()) {
+                        byte[] frame = commandBuffer.poll(1, TimeUnit.SECONDS);
+                        
+                        if (frame != null) {
+                            out.write(frame);
+                            out.flush();
+                            framesSent++;
+                            System.out.printf("[UPLINK] TX TC frame #%d to spacecraft (Queue: %d)%n",
+                                    framesSent, commandBuffer.size());
+                        }
+                    }
+                } catch (IOException e) {
+                    if (running.get()) {
+                        System.err.println("[UPLINK] Error: " + e.getMessage());
+                        Thread.sleep(1000);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[UPLINK] Failed to start: " + e.getMessage());
+        } finally {
+            closeSocket(spacecraftUplinkSocket);
         }
     }
     
@@ -174,7 +282,9 @@ public class GroundStationServer {
     
     public void stop() {
         running.set(false);
-        closeSocket(spacecraftSocket);
-        closeSocket(sleSocket);
+        closeSocket(spacecraftDownlinkSocket);
+        closeSocket(spacecraftUplinkSocket);
+        closeSocket(mocRafSocket);
+        closeSocket(mocFspSocket);
     }
 }
