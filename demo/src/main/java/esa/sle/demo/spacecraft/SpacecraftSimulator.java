@@ -100,31 +100,17 @@ public class SpacecraftSimulator {
     }
     
     private byte[] generateTelemetryData() {
-        // Simulate spacecraft telemetry data
-        ByteBuffer buffer = ByteBuffer.allocate(256);
+        // Simple text message as payload
+        String message = String.format("Hello from Spacecraft! Frame #%d, Time: %s", 
+                frameCount, Instant.now().toString());
         
-        // Timestamp
-        long timestamp = Instant.now().toEpochMilli();
-        buffer.putLong(timestamp);
+        byte[] messageBytes = message.getBytes();
+        byte[] payload = new byte[256];
         
-        // Simulated sensor data
-        buffer.putFloat(random.nextFloat() * 100); // Temperature (°C)
-        buffer.putFloat(random.nextFloat() * 50);  // Voltage (V)
-        buffer.putFloat(random.nextFloat() * 10);  // Current (A)
-        buffer.putInt(random.nextInt(360));        // Attitude (degrees)
-        buffer.putInt(random.nextInt(1000));       // Altitude (km)
+        // Copy message to payload
+        System.arraycopy(messageBytes, 0, payload, 0, Math.min(messageBytes.length, payload.length));
         
-        // Status flags
-        buffer.put((byte) (random.nextBoolean() ? 1 : 0)); // Solar panels deployed
-        buffer.put((byte) (random.nextBoolean() ? 1 : 0)); // Antenna deployed
-        buffer.put((byte) 1); // System nominal
-        
-        // Fill rest with sequence
-        while (buffer.hasRemaining()) {
-            buffer.put((byte) (buffer.position() % 256));
-        }
-        
-        return buffer.array();
+        return payload;
     }
     
     public void stop() {

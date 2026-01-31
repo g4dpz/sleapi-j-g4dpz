@@ -249,6 +249,12 @@ GS_RX_FRAMES=$(grep -c "Received frame #" "$LOG_DIR/groundstation.log" 2>/dev/nu
 GS_TX_FRAMES=$(grep -c "Forwarded frame #" "$LOG_DIR/groundstation.log" 2>/dev/null || echo "0")
 MOC_FRAMES=$(grep -c "Frame #" "$LOG_DIR/moc.log" 2>/dev/null || echo "0")
 
+# Extract and display CCSDS frame structure from first frame
+echo "CCSDS Frame Structure (Frame #1):"
+echo ""
+sed -n '/^CCSDS TM FRAME #1:/,/^=.*=$/p' "$LOG_DIR/moc.log" 2>/dev/null || echo "  (Frame structure not captured)"
+echo ""
+
 echo "Frame Counts:"
 echo "  Spacecraft Sent:        $SC_FRAMES"
 echo "  Ground Station RX:      $GS_RX_FRAMES"
@@ -256,10 +262,10 @@ echo "  Ground Station TX:      $GS_TX_FRAMES"
 echo "  MOC Received:           $MOC_FRAMES"
 echo ""
 
-# Check for errors
-SC_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/spacecraft.log" 2>/dev/null | grep -c "." || true)
-GS_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/groundstation.log" 2>/dev/null | grep -c "." || true)
-MOC_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/moc.log" 2>/dev/null | grep -c "." || true)
+# Check for errors (exclude false positives like "Frame Error Control")
+SC_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/spacecraft.log" 2>/dev/null | grep -v "Frame Error Control" | grep -c "." || true)
+GS_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/groundstation.log" 2>/dev/null | grep -v "Frame Error Control" | grep -c "." || true)
+MOC_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/moc.log" 2>/dev/null | grep -v "Frame Error Control" | grep -c "." || true)
 
 # Ensure variables are numeric (strip any whitespace and default to 0)
 SC_ERRORS=$(echo "${SC_ERRORS:-0}" | tr -d ' ')
