@@ -1,0 +1,66 @@
+================================================================================
+MISSION OPERATIONS CENTER (MOC) CLIENT
+================================================================================
+Ground Station: localhost:5556
+Service: RAF (Return All Frames)
+================================================================================
+
+[MOC] Connected to Ground Station
+[MOC] Receiving telemetry frames...
+--------------------------------------------------------------------------------
+[MOC] Frame #1 | SCID=185 VCID=0 Count=0 | Temp=75.1°C Volt=14.3V Curr=3.7A Alt=845km Att=140° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:31:49.850
+[MOC] Frame #2 | SCID=185 VCID=0 Count=1 | Temp=91.9°C Volt=35.5V Curr=9.9A Alt=914km Att=222° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:31:50.888
+[MOC] Frame #3 | SCID=185 VCID=0 Count=2 | Temp=44.6°C Volt=11.9V Curr=9.1A Alt=567km Att=182° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:31:51.893
+[MOC] Frame #4 | SCID=185 VCID=0 Count=3 | Temp=41.1°C Volt=4.1V Curr=4.3A Alt=248km Att=55° | Solar=✗ Ant=✓ Sys=OK | Time=2026-01-31 08:31:52.900
+[MOC] Frame #5 | SCID=185 VCID=0 Count=4 | Temp=36.8°C Volt=24.4V Curr=5.0A Alt=88km Att=318° | Solar=✗ Ant=✓ Sys=OK | Time=2026-01-31 08:31:53.906
+[MOC] Frame #6 | SCID=185 VCID=0 Count=5 | Temp=98.1°C Volt=12.7V Curr=1.4A Alt=438km Att=40° | Solar=✗ Ant=✓ Sys=OK | Time=2026-01-31 08:31:54.910
+[MOC] Frame #7 | SCID=185 VCID=0 Count=6 | Temp=9.4°C Volt=29.6V Curr=4.8A Alt=401km Att=124° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:31:55.920
+[MOC] Frame #8 | SCID=185 VCID=0 Count=7 | Temp=30.4°C Volt=20.3V Curr=0.7A Alt=742km Att=253° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:31:56.927
+[MOC] Frame #9 | SCID=185 VCID=0 Count=8 | Temp=15.8°C Volt=0.7V Curr=9.4A Alt=641km Att=90° | Solar=✓ Ant=✓ Sys=OK | Time=2026-01-31 08:31:57.930
+[MOC] Frame #10 | SCID=185 VCID=0 Count=9 | Temp=62.4°C Volt=37.3V Curr=6.7A Alt=426km Att=246° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:31:58.935
+--------------------------------------------------------------------------------
+[MOC] Statistics: 10 frames received, 10.89 KB total
+--------------------------------------------------------------------------------
+[MOC] Frame #11 | SCID=185 VCID=0 Count=10 | Temp=48.9°C Volt=14.4V Curr=2.6A Alt=433km Att=54° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:31:59.941
+[MOC] Frame #12 | SCID=185 VCID=0 Count=11 | Temp=7.2°C Volt=10.5V Curr=0.5A Alt=13km Att=158° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:00.946
+[MOC] Frame #13 | SCID=185 VCID=0 Count=12 | Temp=9.2°C Volt=48.9V Curr=6.3A Alt=134km Att=74° | Solar=✗ Ant=✓ Sys=OK | Time=2026-01-31 08:32:01.953
+[MOC] Frame #14 | SCID=185 VCID=0 Count=13 | Temp=96.5°C Volt=28.6V Curr=0.2A Alt=48km Att=209° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:02.957
+[MOC] Frame #15 | SCID=185 VCID=0 Count=14 | Temp=67.3°C Volt=24.9V Curr=5.1A Alt=105km Att=166° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:03.960
+[MOC] Frame #16 | SCID=185 VCID=0 Count=15 | Temp=34.5°C Volt=4.1V Curr=6.7A Alt=543km Att=35° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:04.966
+[MOC] Frame #17 | SCID=185 VCID=0 Count=16 | Temp=51.3°C Volt=33.2V Curr=8.6A Alt=220km Att=284° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:05.973
+[MOC] Frame #18 | SCID=185 VCID=0 Count=17 | Temp=50.4°C Volt=18.6V Curr=1.9A Alt=184km Att=147° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:06.977
+[MOC] Frame #19 | SCID=185 VCID=0 Count=18 | Temp=66.2°C Volt=8.7V Curr=2.5A Alt=927km Att=252° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:07.985
+[MOC] Frame #20 | SCID=185 VCID=0 Count=19 | Temp=99.9°C Volt=30.2V Curr=2.1A Alt=665km Att=128° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:08.993
+--------------------------------------------------------------------------------
+[MOC] Statistics: 20 frames received, 21.78 KB total
+--------------------------------------------------------------------------------
+[MOC] Frame #21 | SCID=185 VCID=0 Count=20 | Temp=66.9°C Volt=49.5V Curr=6.8A Alt=278km Att=278° | Solar=✓ Ant=✓ Sys=OK | Time=2026-01-31 08:32:09.999
+[MOC] Frame #22 | SCID=185 VCID=0 Count=21 | Temp=10.5°C Volt=47.0V Curr=9.1A Alt=323km Att=13° | Solar=✗ Ant=✓ Sys=OK | Time=2026-01-31 08:32:11.002
+[MOC] Frame #23 | SCID=185 VCID=0 Count=22 | Temp=29.4°C Volt=20.5V Curr=9.4A Alt=864km Att=296° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:12.011
+[MOC] Frame #24 | SCID=185 VCID=0 Count=23 | Temp=30.9°C Volt=33.2V Curr=5.7A Alt=593km Att=351° | Solar=✓ Ant=✓ Sys=OK | Time=2026-01-31 08:32:13.017
+[MOC] Frame #25 | SCID=185 VCID=0 Count=24 | Temp=11.8°C Volt=49.9V Curr=1.0A Alt=640km Att=335° | Solar=✓ Ant=✓ Sys=OK | Time=2026-01-31 08:32:14.024
+[MOC] Frame #26 | SCID=185 VCID=0 Count=25 | Temp=10.3°C Volt=37.9V Curr=4.8A Alt=268km Att=72° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:15.030
+[MOC] Frame #27 | SCID=185 VCID=0 Count=26 | Temp=3.8°C Volt=43.3V Curr=5.3A Alt=693km Att=140° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:16.039
+[MOC] Frame #28 | SCID=185 VCID=0 Count=27 | Temp=50.0°C Volt=25.8V Curr=3.3A Alt=847km Att=78° | Solar=✗ Ant=✓ Sys=OK | Time=2026-01-31 08:32:17.046
+[MOC] Frame #29 | SCID=185 VCID=0 Count=28 | Temp=9.1°C Volt=19.0V Curr=5.1A Alt=407km Att=5° | Solar=✓ Ant=✓ Sys=OK | Time=2026-01-31 08:32:18.053
+[MOC] Frame #30 | SCID=185 VCID=0 Count=29 | Temp=65.0°C Volt=42.5V Curr=5.8A Alt=845km Att=174° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:19.060
+--------------------------------------------------------------------------------
+[MOC] Statistics: 30 frames received, 32.67 KB total
+--------------------------------------------------------------------------------
+[MOC] Frame #31 | SCID=185 VCID=0 Count=30 | Temp=1.8°C Volt=14.8V Curr=1.6A Alt=524km Att=216° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:20.067
+[MOC] Frame #32 | SCID=185 VCID=0 Count=31 | Temp=48.0°C Volt=5.9V Curr=0.6A Alt=128km Att=13° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:21.072
+[MOC] Frame #33 | SCID=185 VCID=0 Count=32 | Temp=68.4°C Volt=47.1V Curr=6.2A Alt=0km Att=230° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:22.079
+[MOC] Frame #34 | SCID=185 VCID=0 Count=33 | Temp=9.3°C Volt=30.0V Curr=7.7A Alt=840km Att=20° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:23.087
+[MOC] Frame #35 | SCID=185 VCID=0 Count=34 | Temp=26.9°C Volt=2.8V Curr=1.0A Alt=317km Att=350° | Solar=✗ Ant=✗ Sys=OK | Time=2026-01-31 08:32:24.092
+[MOC] Frame #36 | SCID=185 VCID=0 Count=35 | Temp=22.4°C Volt=45.3V Curr=2.8A Alt=324km Att=305° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:25.098
+[MOC] Frame #37 | SCID=185 VCID=0 Count=36 | Temp=32.5°C Volt=11.9V Curr=3.3A Alt=626km Att=310° | Solar=✓ Ant=✗ Sys=OK | Time=2026-01-31 08:32:26.105
+
+[MOC] Shutting down...
+
+================================================================================
+MOC SESSION STATISTICS
+================================================================================
+Total Frames Received: 37
+Total Data Volume: 40.29 KB (0.04 MB)
+Average Frame Size: 1115.00 bytes
+================================================================================
