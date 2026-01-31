@@ -183,6 +183,49 @@ System.out.println("VCID: " + decoded.getVirtualChannelId());
 System.out.println("Nominal: " + decoded.isNominal());
 ```
 
+### Time Code Utilities
+
+Time code encoding/decoding for CCSDS time formats as specified in CCSDS 301.0-B-4.
+
+**Classes:**
+- `CUCTimeEncoder` - Encode CCSDS Unsegmented Time Code (CUC)
+- `CUCTimeDecoder` - Decode CCSDS Unsegmented Time Code (CUC)
+- `CDSTimeEncoder` - Encode CCSDS Day Segmented Time Code (CDS)
+- `CDSTimeDecoder` - Decode CCSDS Day Segmented Time Code (CDS)
+
+**Features:**
+- CUC format: Configurable coarse/fine time resolution
+- CDS format: Day counter + milliseconds (+ optional sub-milliseconds)
+- Unix epoch (1970-01-01) for CUC
+- CCSDS epoch (1958-01-01) for CDS
+- Encode/decode current time
+- Sub-second precision support
+
+**Usage Example:**
+```java
+import esa.sle.ccsds.utils.time.*;
+import java.time.Instant;
+
+// CUC Encoding (Unsegmented Time Code)
+Instant now = Instant.now();
+byte[] cucTime = CUCTimeEncoder.encode(now, 4, 3); // 4 bytes coarse, 3 bytes fine
+byte[] cucNow = CUCTimeEncoder.encodeNow(); // Current time with default resolution
+
+// CUC Decoding
+Instant decoded = CUCTimeDecoder.decode(cucTime, 4, 3);
+Instant decodedDefault = CUCTimeDecoder.decode(cucTime); // Assumes 4+3 bytes
+
+// CDS Encoding (Day Segmented Time Code)
+byte[] cdsBasic = CDSTimeEncoder.encode(now); // 6 bytes: day + milliseconds
+byte[] cdsExtended = CDSTimeEncoder.encode(now, true); // 8 bytes: + sub-millis
+byte[] cdsNow = CDSTimeEncoder.encodeNow(); // Current time, basic format
+
+// CDS Decoding
+Instant cdsDecoded = CDSTimeDecoder.decode(cdsBasic); // Auto-detects 6 or 8 bytes
+Instant cdsDecodedBasic = CDSTimeDecoder.decodeBasic(cdsBasic); // 6 bytes only
+Instant cdsDecodedExtended = CDSTimeDecoder.decodeExtended(cdsExtended); // 8 bytes only
+```
+
 ## Integration with SLE Java API
 
 This module is designed to work alongside the SLE Java API:
@@ -209,6 +252,9 @@ This module has no dependencies on other SLE modules - it's a standalone utility
 - **CCSDS 231.0-B-3**: TC Synchronization and Channel Coding (CLTU)
 - **CCSDS 232.0-B-3**: TC Space Data Link Protocol
 - **CCSDS 132.0-B-2**: TM Space Data Link Protocol
+- **CCSDS 131.0-B-3**: TM Synchronization and Channel Coding
+- **CCSDS 301.0-B-4**: Time Code Formats
+- **CCSDS 732.0-B-3**: AOS Space Data Link Protocol
 
 ## Version
 
@@ -229,9 +275,7 @@ This module extends the SLE Java API with physical layer utilities. Contribution
 ## Future Enhancements
 
 1. **Full BCH(63,56) Implementation** - Use proper BCH polynomial for error correction
-2. **Frame Builders** - Helper classes for constructing CCSDS frames
-3. **Frame Parsers** - Helper classes for parsing CCSDS frame headers
-4. **Randomization** - Pseudo-randomization for spectral shaping
-5. **Reed-Solomon** - Forward error correction encoding/decoding
-6. **Time Code Utilities** - CUC and CDS time code encoding/decoding
-7. **Space Packet Protocol** - CCSDS Space Packet building and parsing
+2. **Reed-Solomon** - Forward error correction encoding/decoding
+3. **Space Packet Protocol** - CCSDS Space Packet building and parsing
+4. **Advanced Time Codes** - CCS (Calendar Segmented) and ASCII time codes
+5. **Frame Builders** - Helper classes for constructing complete CCSDS frames
