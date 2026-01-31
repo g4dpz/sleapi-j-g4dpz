@@ -45,6 +45,38 @@ int cltuSize = CLTUEncoder.calculateCLTUSize(commandFrame.length);
 int codeBlocks = CLTUEncoder.getCodeBlockCount(commandFrame.length);
 ```
 
+### Pseudo-Randomization
+
+Pseudo-randomization for spectral shaping of CCSDS data streams as specified in CCSDS 131.0-B-3.
+
+**Classes:**
+- `PseudoRandomizer` - Apply/remove pseudo-randomization
+
+**Features:**
+- CCSDS polynomial: 1 + x^3 + x^5 + x^7 + x^8
+- Self-synchronizing scrambler
+- Randomize/derandomize operations
+- In-place processing option
+- Sequence generation
+
+**Usage Example:**
+```java
+import esa.sle.ccsds.utils.randomization.PseudoRandomizer;
+
+// Randomize data (creates new array)
+byte[] randomized = PseudoRandomizer.randomize(frameData);
+
+// Derandomize data (self-synchronizing, same operation)
+byte[] original = PseudoRandomizer.derandomize(randomized);
+
+// In-place processing (no memory allocation)
+PseudoRandomizer.randomizeInPlace(frameData);
+PseudoRandomizer.derandomizeInPlace(frameData);
+
+// Generate pseudo-random sequence
+byte[] sequence = PseudoRandomizer.generateSequence(1024);
+```
+
 ### Frame Header Parser
 
 Frame header parsing utilities for CCSDS Transfer Frames as specified in CCSDS 732.0-B-3.
