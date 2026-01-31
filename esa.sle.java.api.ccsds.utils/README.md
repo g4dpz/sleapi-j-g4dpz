@@ -226,6 +226,58 @@ Instant cdsDecodedBasic = CDSTimeDecoder.decodeBasic(cdsBasic); // 6 bytes only
 Instant cdsDecodedExtended = CDSTimeDecoder.decodeExtended(cdsExtended); // 8 bytes only
 ```
 
+### Space Packet Protocol
+
+Space Packet building and parsing for CCSDS application-level data as specified in CCSDS 133.0-B-2.
+
+**Classes:**
+- `SpacePacketBuilder` - Build CCSDS Space Packets
+- `SpacePacketParser` - Parse CCSDS Space Packets
+
+**Features:**
+- Primary header (6 bytes): Version, Type, APID, Sequence Control, Data Length
+- Support for secondary header flag
+- Packet segmentation support (unsegmented, first, continuation, last)
+- Telemetry (TM) and Telecommand (TC) packet types
+- APID-based application multiplexing
+- Builder pattern for packet construction
+- Quick extraction methods (APID, sequence count, type)
+- Packet validation
+
+**Usage Example:**
+```java
+import esa.sle.ccsds.utils.packets.*;
+
+// Build a simple telemetry packet
+byte[] userData = "Hello from spacecraft".getBytes();
+byte[] packet = SpacePacketBuilder.buildSimple(100, 42, userData);
+
+// Build a packet with full control
+byte[] packet = SpacePacketBuilder.builder()
+    .setApid(100)                                    // Application ID
+    .setSequenceCount(42)                            // Packet sequence number
+    .setSequenceFlags(SpacePacketBuilder.SEQ_UNSEGMENTED)
+    .setType(SpacePacketBuilder.TYPE_TM)             // Telemetry packet
+    .setSecondaryHeaderFlag(false)
+    .setData(userData)
+    .build();
+
+// Parse a packet
+SpacePacketParser.SpacePacket parsed = SpacePacketParser.parse(packet);
+System.out.println("APID: " + parsed.getApid());
+System.out.println("Sequence: " + parsed.getSequenceCount());
+System.out.println("Type: " + (parsed.isTelemetry() ? "TM" : "TC"));
+System.out.println("Data: " + new String(parsed.getData()));
+
+// Quick extraction (without full parsing)
+int apid = SpacePacketParser.extractApid(packet);
+int seqCount = SpacePacketParser.extractSequenceCount(packet);
+int type = SpacePacketParser.extractType(packet);
+
+// Validate packet
+boolean valid = SpacePacketParser.isValidPacket(packet);
+```
+
 ## Integration with SLE Java API
 
 This module is designed to work alongside the SLE Java API:
@@ -250,11 +302,12 @@ This module has no dependencies on other SLE modules - it's a standalone utility
 ## CCSDS References
 
 - **CCSDS 231.0-B-3**: TC Synchronization and Channel Coding (CLTU)
-- **CCSDS 232.0-B-3**: TC Space Data Link Protocol
+- **CCSDS 232.0-B-3**: TC Space Data Link Protocol (CLCW)
 - **CCSDS 132.0-B-2**: TM Space Data Link Protocol
-- **CCSDS 131.0-B-3**: TM Synchronization and Channel Coding
-- **CCSDS 301.0-B-4**: Time Code Formats
-- **CCSDS 732.0-B-3**: AOS Space Data Link Protocol
+- **CCSDS 131.0-B-3**: TM Synchronization and Channel Coding (CRC, Randomization)
+- **CCSDS 301.0-B-4**: Time Code Formats (CUC, CDS)
+- **CCSDS 732.0-B-3**: AOS Space Data Link Protocol (Frame Headers)
+- **CCSDS 133.0-B-2**: Space Packet Protocol
 
 ## Version
 
@@ -276,6 +329,6 @@ This module extends the SLE Java API with physical layer utilities. Contribution
 
 1. **Full BCH(63,56) Implementation** - Use proper BCH polynomial for error correction
 2. **Reed-Solomon** - Forward error correction encoding/decoding
-3. **Space Packet Protocol** - CCSDS Space Packet building and parsing
-4. **Advanced Time Codes** - CCS (Calendar Segmented) and ASCII time codes
-5. **Frame Builders** - Helper classes for constructing complete CCSDS frames
+3. **Advanced Time Codes** - CCS (Calendar Segmented) and ASCII time codes
+4. **Frame Builders** - Helper classes for constructing complete CCSDS frames
+5. **Turbo Coding** - Advanced error correction for high-performance links
