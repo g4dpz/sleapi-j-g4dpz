@@ -8,6 +8,18 @@ The SLE Java API project uses Tycho (Eclipse plugin build system) for its main b
 
 ### Install Both Libraries
 
+Run from project root:
+
+```bash
+# Install CCSDS Utilities
+./esa.sle.java.api.ccsds.utils/install-maven.sh
+
+# Install SLE API Core
+./esa.sle.java.api.core/install-maven.sh
+```
+
+Or run from module directories:
+
 ```bash
 # Install CCSDS Utilities
 cd esa.sle.java.api.ccsds.utils
