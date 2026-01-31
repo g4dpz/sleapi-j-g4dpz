@@ -179,7 +179,7 @@ public class GroundStationServer {
     }
     
     /**
-     * Receive command frames from MOC via FSP service
+     * Receive CLTUs from MOC via FSP service
      */
     private void handleMocFsp() {
         try {
@@ -191,26 +191,65 @@ public class GroundStationServer {
                     System.out.println("[FSP] MOC connected: " + client.getRemoteSocketAddress());
                     
                     InputStream in = client.getInputStream();
-                    byte[] buffer = new byte[FRAME_SIZE];
+                    byte[] buffer = new byte[4096]; // Large buffer for CLTUs
                     int frameCount = 0;
                     
                     while (running.get()) {
+                        // Read CLTU: start sequence (0xEB90) + code blocks + tail (0xC5 x 7)
                         int bytesRead = 0;
-                        while (bytesRead < FRAME_SIZE) {
-                            int read = in.read(buffer, bytesRead, FRAME_SIZE - bytesRead);
-                            if (read == -1) throw new IOException("Connection closed");
-                            bytesRead += read;
+                        
+                        // Find start sequence
+                        boolean foundStart = false;
+                        while (!foundStart && running.get()) {
+                            int b1 = in.read();
+                            if (b1 == -1) throw new IOException("Connection closed");
+                            
+                            if (b1 == 0xEB) {
+                                int b2 = in.read();
+                                if (b2 == -1) throw new IOException("Connection closed");
+                                
+                                if (b2 == 0x90) {
+                                    buffer[bytesRead++] = (byte) b1;
+                                    buffer[bytesRead++] = (byte) b2;
+                                    foundStart = true;
+                                }
+                            }
                         }
                         
-                        byte[] frame = new byte[FRAME_SIZE];
-                        System.arraycopy(buffer, 0, frame, 0, FRAME_SIZE);
+                        if (!foundStart) continue;
                         
-                        if (commandBuffer.offer(frame)) {
+                        // Read until tail sequence (7 consecutive 0xC5 bytes)
+                        int tailMatchCount = 0;
+                        while (bytesRead < buffer.length && running.get()) {
+                            int b = in.read();
+                            if (b == -1) throw new IOException("Connection closed");
+                            buffer[bytesRead++] = (byte) b;
+                            
+                            if (b == 0xC5) {
+                                tailMatchCount++;
+                                if (tailMatchCount >= 7) {
+                                    break; // Complete CLTU received
+                                }
+                            } else {
+                                tailMatchCount = 0;
+                            }
+                        }
+                        
+                        if (tailMatchCount < 7) {
+                            System.err.println("[FSP] CLTU tail sequence not found");
+                            continue;
+                        }
+                        
+                        // Extract complete CLTU
+                        byte[] cltu = new byte[bytesRead];
+                        System.arraycopy(buffer, 0, cltu, 0, bytesRead);
+                        
+                        if (commandBuffer.offer(cltu)) {
                             frameCount++;
-                            System.out.printf("[FSP] RX TC frame #%d from MOC (Queue: %d)%n",
-                                    frameCount, commandBuffer.size());
+                            System.out.printf("[FSP] RX CLTU #%d from MOC (%d bytes, Queue: %d)%n",
+                                    frameCount, cltu.length, commandBuffer.size());
                         } else {
-                            System.err.println("[FSP] Command buffer full! Dropping frame.");
+                            System.err.println("[FSP] Command buffer full! Dropping CLTU.");
                         }
                     }
                 } catch (IOException e) {
@@ -228,7 +267,7 @@ public class GroundStationServer {
     }
     
     /**
-     * Forward command frames to spacecraft via uplink
+     * Forward CLTUs to spacecraft via uplink
      */
     private void handleSpacecraftUplink() {
         try {
@@ -240,17 +279,17 @@ public class GroundStationServer {
                     System.out.println("[UPLINK] Spacecraft connected: " + client.getRemoteSocketAddress());
                     
                     OutputStream out = client.getOutputStream();
-                    int framesSent = 0;
+                    int cltusSent = 0;
                     
                     while (running.get() && !client.isClosed()) {
-                        byte[] frame = commandBuffer.poll(1, TimeUnit.SECONDS);
+                        byte[] cltu = commandBuffer.poll(1, TimeUnit.SECONDS);
                         
-                        if (frame != null) {
-                            out.write(frame);
+                        if (cltu != null) {
+                            out.write(cltu);
                             out.flush();
-                            framesSent++;
-                            System.out.printf("[UPLINK] TX TC frame #%d to spacecraft (Queue: %d)%n",
-                                    framesSent, commandBuffer.size());
+                            cltusSent++;
+                            System.out.printf("[UPLINK] TX CLTU #%d to spacecraft (%d bytes, Queue: %d)%n",
+                                    cltusSent, cltu.length, commandBuffer.size());
                         }
                     }
                 } catch (IOException e) {

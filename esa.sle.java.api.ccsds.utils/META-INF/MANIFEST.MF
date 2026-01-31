@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: SLE Java API - CCSDS Utilities
+Bundle-SymbolicName: esa.sle.java.api.ccsds.utils
+Bundle-Version: 5.1.6
+Bundle-Vendor: ESA
+Bundle-RequiredExecutionEnvironment: JavaSE-17
+Export-Package: esa.sle.ccsds.utils,
+ esa.sle.ccsds.utils.cltu,
+ esa.sle.ccsds.utils.frames,
+ esa.sle.ccsds.utils.clcw

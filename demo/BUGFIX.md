@@ -1,103 +1,143 @@
-# Bug Fix - Error Counting in test-demo.sh
+# Bugfix Summary - CLTU Timing Issue
 
 ## Issue
 
-The test script was failing with a syntax error when counting errors:
-
-```
-Error Counts:
-  Spacecraft Errors:      00
-  Ground Station Errors:  00
-  MOC Errors:             00
-
-./test-demo.sh: line 307: 00: syntax error in expression (error token is "0")
-./test-demo.sh: line 308: [: : integer expression expected
-✗ FAIL:  errors detected
-```
+The second command was not being received by the spacecraft due to a timing issue in the CLTU reading logic.
 
 ## Root Cause
 
-The `grep -c` command returns "0" with exit code 1 when no matches are found. The `|| echo "0"` fallback was then triggered, resulting in TWO zeros being concatenated: "0" from grep-c plus "0" from echo, making "00". This caused:
-1. Arithmetic expression errors when trying to add the values: `00 + 00 + 00`
-2. Integer comparison failures in the validation logic
+The Ground Station's FSP handler was reading fixed-size command frames (1115 bytes) instead of variable-size CLTUs (1289 bytes). This caused:
+
+1. MOC sends CLTU (1289 bytes)
+2. Ground Station reads only 1115 bytes
+3. Remaining 174 bytes left in buffer
+4. Next CLTU read starts mid-stream
+5. Spacecraft times out waiting for complete CLTU
+6. Connection drops and reconnects
 
 ## Solution
 
-Changed from using `|| echo "0"` fallback to `|| true` to prevent double-zero concatenation:
+Updated Ground Station to properly handle CLTUs:
 
 ### Before (Broken)
-```bash
-SC_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/spacecraft.log" 2>/dev/null | grep -c "." || echo "0")
-# When no errors: grep -c returns "0" with exit code 1, triggering || echo "0"
-# Result: "00" (concatenation of both zeros)
-TOTAL_ERRORS=$((SC_ERRORS + GS_ERRORS + MOC_ERRORS))  # Fails with "00 + 00 + 00"
+```java
+// FSP handler read fixed-size frames
+byte[] buffer = new byte[FRAME_SIZE]; // 1115 bytes
+while (bytesRead < FRAME_SIZE) {
+    int read = in.read(buffer, bytesRead, FRAME_SIZE - bytesRead);
+    // ...
+}
 ```
 
 ### After (Fixed)
-```bash
-SC_ERRORS=$(grep -i "error\|exception" "$LOG_DIR/spacecraft.log" 2>/dev/null | grep -c "." || true)
-# When no errors: grep -c returns "0", || true prevents fallback
-# Result: "0" (single zero)
-SC_ERRORS=$(echo "${SC_ERRORS:-0}" | tr -d ' ')
-SC_ERRORS=${SC_ERRORS:-0}
-TOTAL_ERRORS=$((${SC_ERRORS:-0} + ${GS_ERRORS:-0} + ${MOC_ERRORS:-0}))  # Works correctly
+```java
+// FSP handler reads complete CLTUs
+byte[] buffer = new byte[4096]; // Large buffer for CLTUs
+
+// Find start sequence (0xEB90)
+while (!foundStart) {
+    int b1 = in.read();
+    if (b1 == 0xEB) {
+        int b2 = in.read();
+        if (b2 == 0x90) {
+            buffer[bytesRead++] = (byte) b1;
+            buffer[bytesRead++] = (byte) b2;
+            foundStart = true;
+        }
+    }
+}
+
+// Read until tail sequence (7 x 0xC5)
+int tailMatchCount = 0;
+while (bytesRead < buffer.length) {
+    int b = in.read();
+    buffer[bytesRead++] = (byte) b;
+    
+    if (b == 0xC5) {
+        tailMatchCount++;
+        if (tailMatchCount >= 7) break;
+    } else {
+        tailMatchCount = 0;
+    }
+}
 ```
 
 ## Changes Made
 
-1. **Use || true**: Changed `|| echo "0"` to `|| true` to prevent double-zero concatenation
-2. **Strip whitespace**: Use `tr -d ' '` to remove any spaces
-3. **Default values**: Use `${VAR:-0}` to ensure variables default to 0 if empty
-4. **Safe arithmetic**: Use `${VAR:-0}` in arithmetic expressions for extra safety
+### 1. GroundStationServer.java - handleMocFsp()
+- Changed from reading fixed-size frames to reading complete CLTUs
+- Added CLTU start sequence detection (0xEB90)
+- Added CLTU tail sequence detection (7 x 0xC5)
+- Updated logging to show CLTU size
 
-## Benefits
+### 2. GroundStationServer.java - handleSpacecraftUplink()
+- Updated logging to show CLTU forwarding
+- No logic changes needed (already forwarding complete buffers)
 
-- ✅ No more syntax errors
-- ✅ Handles empty log files correctly
-- ✅ Handles files with no errors correctly
-- ✅ More robust error counting
-- ✅ Works across different grep implementations
+## Test Results
 
-## Testing
+### Before Fix
+```
+Spacecraft Log:
+[UPLINK] Found CLTU start sequence
+[UPLINK] Connection error: Read timed out
+[UPLINK] Retrying in 5 seconds...
 
-The fix was verified with a test script that:
-1. Created log files with 0 errors
-2. Created log files with 2 errors
-3. Verified counting works correctly
-4. Verified arithmetic works correctly
+Commands Received: 1 (only first command)
+```
 
-Result: ✅ All tests passed
+### After Fix
+```
+Spacecraft Log:
+[UPLINK] Received CLTU: 1289 bytes, decoded to 1115 byte command frame
+[UPLINK] Command #1 (Frame Count: 0): DEPLOY_SOLAR_PANELS
+[SPACECRAFT] Executing: DEPLOY_SOLAR_PANELS
+[UPLINK] Received CLTU: 1289 bytes, decoded to 1115 byte command frame
+[UPLINK] Command #2 (Frame Count: 1): ACTIVATE_ANTENNA
+[SPACECRAFT] Executing: ACTIVATE_ANTENNA
 
-## Impact
+Commands Received: 2 (both commands)
+```
 
-This fix ensures the automated test script works correctly when:
-- No errors are present (the common case)
-- Errors are present (for debugging)
-- Log files are empty
-- Different shell environments
-
-## Files Modified
-
-- `demo/test-demo.sh` - Fixed error counting logic
+### Telemetry Confirmation
+```
+[RAF] Frame #21 | Solar: DEPLOYED | Antenna: ACTIVE | Commands RX: 2
+```
 
 ## Verification
 
-Run the test script to verify:
-```bash
-cd demo
-./test-demo.sh
+✅ Both commands received and executed
+✅ No timeout errors
+✅ No connection drops
+✅ Telemetry shows correct state changes
+✅ CLCW acknowledgments working (ACK=1)
+✅ All tests passing (5/5)
+
+## Lessons Learned
+
+1. **Protocol Consistency**: When using CLTU encoding, all components must handle CLTUs, not raw frames
+2. **Variable-Length Protocols**: Need proper framing detection (start/tail sequences)
+3. **Buffer Sizing**: Must accommodate largest possible message (CLTU > frame)
+4. **Timeout Handling**: Byte-by-byte reading with timeouts can cause issues with large messages
+
+## Architecture Clarification
+
+```
+MOC → [CLTU 1289 bytes] → Ground Station → [CLTU 1289 bytes] → Spacecraft
+                          (FSP handler)      (Uplink handler)
+
+Ground Station acts as transparent relay for CLTUs:
+- Receives complete CLTU from MOC
+- Queues complete CLTU
+- Forwards complete CLTU to spacecraft
 ```
 
-Expected output:
-```
-Error Counts:
-  Spacecraft Errors:      0
-  Ground Station Errors:  0
-  MOC Errors:             0
-
-✓ PASS: No errors detected
-```
+The Ground Station does NOT decode/re-encode CLTUs - it forwards them transparently.
 
 ## Status
 
-✅ **FIXED** - Error counting now works correctly in all scenarios.
+🎉 **ISSUE RESOLVED**
+
+Both automated commands now execute successfully:
+- Frame 10: DEPLOY_SOLAR_PANELS ✅
+- Frame 20: ACTIVATE_ANTENNA ✅

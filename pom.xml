@@ -30,6 +30,7 @@
 	<modules>
 		<module>esa.sle.java.api.target</module>
 		<module>esa.sle.java.api.core</module>
+		<module>esa.sle.java.api.ccsds.utils</module>
 		<module>esa.sle.java.api.core.test</module>
 		<module>esa.sle.java.api.core.test.harness</module>
 		<module>esa.sle.java.api.feature</module>

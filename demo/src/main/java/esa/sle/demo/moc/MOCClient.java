@@ -1,5 +1,6 @@
 package esa.sle.demo.moc;
 
+import esa.sle.ccsds.utils.cltu.CLTUEncoder;
 import esa.sle.demo.common.CommandFrame;
 
 import java.io.BufferedReader;
@@ -167,6 +168,7 @@ public class MOCClient {
                 return;
             }
             
+            // Create command frame
             CommandFrame cmdFrame = new CommandFrame(
                     SPACECRAFT_ID,
                     VIRTUAL_CHANNEL_ID,
@@ -174,11 +176,17 @@ public class MOCClient {
                     command
             );
             
-            commandOutput.write(cmdFrame.getData());
+            // Wrap in CLTU for uplink using library encoder
+            byte[] cltu = CLTUEncoder.encode(cmdFrame.getData());
+            
+            // Send CLTU
+            commandOutput.write(cltu);
             commandOutput.flush();
             
             commandsSent.incrementAndGet();
+            int codeBlocks = CLTUEncoder.getCodeBlockCount(cmdFrame.getData().length);
             System.out.printf("[FSP] Sent command #%d: %s%n", commandsSent.get(), command);
+            System.out.printf("[FSP] CLTU: %d bytes, %d code blocks%n", cltu.length, codeBlocks);
             
         } catch (IOException e) {
             System.err.println("[FSP] Failed to send command: " + e.getMessage());

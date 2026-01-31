@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>esa.sle.java</groupId>
+        <artifactId>esa.sle.java</artifactId>
+        <version>5.1.6</version>
+    </parent>
+
+    <artifactId>esa.sle.java.api.ccsds.utils</artifactId>
+    <packaging>eclipse-plugin</packaging>
+
+    <name>SLE Java API - CCSDS Utilities</name>
+    <description>CCSDS utility classes for physical layer encoding/decoding (CLTU, frames, CLCW)</description>
+
+    <dependencies>
+        <!-- No dependencies on other SLE modules - this is a standalone utility library -->
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

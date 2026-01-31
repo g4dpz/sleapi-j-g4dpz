@@ -1,5 +1,7 @@
 package esa.sle.demo.spacecraft;
 
+import esa.sle.ccsds.utils.cltu.CLTUDecoder;
+import esa.sle.ccsds.utils.cltu.CLTUException;
 import esa.sle.demo.common.CommandFrame;
 import esa.sle.demo.common.TelemetryFrame;
 
@@ -137,30 +139,116 @@ public class SpacecraftSimulator {
         while (running.get()) {
             try (Socket socket = new Socket(GROUND_STATION_HOST, UPLINK_PORT)) {
                 System.out.println("[UPLINK] Connected to Ground Station");
+                socket.setSoTimeout(5000); // 5 second timeout for reads
                 InputStream in = socket.getInputStream();
-                byte[] buffer = new byte[1115];
+                
+                // Buffer for reading CLTUs
+                byte[] buffer = new byte[4096]; // Large buffer for CLTU
                 
                 while (running.get()) {
-                    // Read command frame
+                    // Read complete CLTU
+                    // Start sequence: 0xEB90
+                    // Tail sequence: 0xC5C5C5C5C5C5C5
+                    
                     int bytesRead = 0;
-                    while (bytesRead < buffer.length) {
-                        int read = in.read(buffer, bytesRead, buffer.length - bytesRead);
-                        if (read == -1) throw new IOException("Connection closed");
-                        bytesRead += read;
+                    
+                    // Find and read start sequence
+                    boolean foundStart = false;
+                    while (!foundStart && running.get()) {
+                        try {
+                            int b1 = in.read();
+                            if (b1 == -1) throw new IOException("Connection closed");
+                            
+                            if (b1 == 0xEB) {
+                                int b2 = in.read();
+                                if (b2 == -1) throw new IOException("Connection closed");
+                                
+                                if (b2 == 0x90) {
+                                    // Found start sequence
+                                    buffer[bytesRead++] = (byte) b1;
+                                    buffer[bytesRead++] = (byte) b2;
+                                    foundStart = true;
+                                    System.out.println("[UPLINK] Found CLTU start sequence");
+                                } else {
+                                    // Not start sequence, b2 might be start of next sequence
+                                    if (b2 == 0xEB) {
+                                        // Check next byte
+                                        int b3 = in.read();
+                                        if (b3 == -1) throw new IOException("Connection closed");
+                                        if (b3 == 0x90) {
+                                            buffer[bytesRead++] = (byte) b2;
+                                            buffer[bytesRead++] = (byte) b3;
+                                            foundStart = true;
+                                            System.out.println("[UPLINK] Found CLTU start sequence");
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (java.net.SocketTimeoutException e) {
+                            // Timeout is normal, just continue
+                            continue;
+                        }
                     }
                     
-                    // Parse and execute command
-                    CommandFrame cmdFrame = new CommandFrame(buffer);
-                    String command = cmdFrame.getCommand();
-                    int cmdFrameCount = cmdFrame.getFrameCount();
+                    if (!foundStart) {
+                        continue;
+                    }
                     
-                    commandsReceived.incrementAndGet();
-                    lastCommandFrameCount = cmdFrameCount;  // Store for CLCW acknowledgment
+                    // Read until tail sequence
+                    int tailMatchCount = 0;
+                    while (bytesRead < buffer.length && running.get()) {
+                        int b = in.read();
+                        if (b == -1) throw new IOException("Connection closed");
+                        buffer[bytesRead++] = (byte) b;
+                        
+                        // Check for tail sequence (7 consecutive 0xC5 bytes)
+                        if (b == 0xC5) {
+                            tailMatchCount++;
+                            if (tailMatchCount >= 7) {
+                                // Found complete CLTU
+                                break;
+                            }
+                        } else {
+                            tailMatchCount = 0;
+                        }
+                    }
                     
-                    System.out.printf("[UPLINK] Received command #%d (Frame Count: %d): %s%n",
-                            commandsReceived.get(), cmdFrameCount, command);
+                    if (tailMatchCount < 7) {
+                        System.err.println("[UPLINK] CLTU tail sequence not found");
+                        continue;
+                    }
                     
-                    executeCommand(command);
+                    // Extract CLTU
+                    byte[] cltuData = new byte[bytesRead];
+                    System.arraycopy(buffer, 0, cltuData, 0, bytesRead);
+                    
+                    // Decode CLTU using library decoder
+                    try {
+                        byte[] commandFrameData = CLTUDecoder.decode(cltuData);
+                        
+                        // Parse command frame
+                        CommandFrame cmdFrame = new CommandFrame(commandFrameData);
+                        String command = cmdFrame.getCommand();
+                        int cmdFrameCount = cmdFrame.getFrameCount();
+                        
+                        commandsReceived.incrementAndGet();
+                        lastCommandFrameCount = cmdFrameCount;  // Store for CLCW acknowledgment
+                        
+                        System.out.printf("[UPLINK] Received CLTU: %d bytes, decoded to %d byte command frame%n",
+                                cltuData.length, commandFrameData.length);
+                        System.out.printf("[UPLINK] Command #%d (Frame Count: %d): %s%n",
+                                commandsReceived.get(), cmdFrameCount, command);
+                        
+                        executeCommand(command);
+                        
+                        // Small delay to ensure we're ready for next CLTU
+                        Thread.sleep(10);
+                        
+                    } catch (CLTUException e) {
+                        System.err.println("[UPLINK] CLTU decode error: " + e.getMessage());
+                    } catch (InterruptedException e) {
+                        break;
+                    }
                 }
             } catch (IOException e) {
                 if (running.get()) {
