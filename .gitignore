@@ -14,3 +14,7 @@ esa.sle.java.api.core/lib/
 **/generated/**
 **/src_generated/**
 .DS_Store
+
+# Ignore test logs
+test-logs/
+demo/test-logs/
