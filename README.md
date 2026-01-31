@@ -58,7 +58,9 @@ See [Demo README](demo/README.md) for usage instructions.
 
 ## Build
 
-Build the entire project:
+### Standard Maven Build (Recommended)
+
+Build the entire project using standard Maven:
 
 ```bash
 mvn clean install
@@ -68,6 +70,27 @@ Build without tests:
 
 ```bash
 mvn clean install -DskipTests
+```
+
+Or use the convenience script:
+
+```bash
+./build-maven.sh
+```
+
+This builds:
+1. CCSDS Utilities Library
+2. SLE API Core
+3. Demo Application
+
+All artifacts are installed to your local Maven repository (`~/.m2/repository`).
+
+### Legacy Tycho Build
+
+For Eclipse plugin development, the legacy Tycho build is still available:
+
+```bash
+mvn -f pom-tycho.xml clean install
 ```
 
 ## Quick Start

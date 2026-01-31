@@ -2,34 +2,23 @@
 
 ## Overview
 
-The SLE Java API project uses Tycho (Eclipse plugin build system) for its main build, which creates Eclipse-specific metadata. To enable standard Maven projects to use the libraries, we provide standalone Maven builds that generate proper Maven artifacts.
+The SLE Java API now uses standard Maven for building and dependency management. Both libraries can be easily used as dependencies in any Maven project.
 
 ## Quick Start
 
-### Install Both Libraries
+### Build and Install
 
-Run from project root:
+From the project root:
 
 ```bash
-# Install CCSDS Utilities
-./esa.sle.java.api.ccsds.utils/install-maven.sh
-
-# Install SLE API Core
-./esa.sle.java.api.core/install-maven.sh
+# Build and install both libraries
+mvn clean install
 ```
 
-Or run from module directories:
+Or use the convenience script:
 
 ```bash
-# Install CCSDS Utilities
-cd esa.sle.java.api.ccsds.utils
-./install-maven.sh
-cd ..
-
-# Install SLE API Core
-cd esa.sle.java.api.core
-./install-maven.sh
-cd ..
+./build-maven.sh
 ```
 
 ### Use in Your Project
@@ -73,8 +62,13 @@ Add to your `pom.xml`:
 
 **Installation:**
 ```bash
+mvn clean install
+```
+
+Or build just the core library:
+```bash
 cd esa.sle.java.api.core
-./install-maven.sh
+mvn clean install
 ```
 
 **Documentation:** [esa.sle.java.api.core/MAVEN_INSTALL.md](esa.sle.java.api.core/MAVEN_INSTALL.md)
@@ -97,8 +91,13 @@ cd esa.sle.java.api.core
 
 **Installation:**
 ```bash
+mvn clean install
+```
+
+Or build just the utilities library:
+```bash
 cd esa.sle.java.api.ccsds.utils
-./install-maven.sh
+mvn clean install
 ```
 
 **Documentation:** [esa.sle.java.api.ccsds.utils/MAVEN_INSTALL.md](esa.sle.java.api.ccsds.utils/MAVEN_INSTALL.md)
@@ -230,37 +229,38 @@ mvn dependency:get -Dartifact=esa.sle.java:esa.sle.java.api.core:5.1.6
 - **Maven**: 3.8.5 or higher
 - **OS**: Linux, macOS, or Windows
 
-## Comparison: Tycho vs Standalone Maven
+## Build System
 
-| Feature | Tycho Build | Standalone Maven Build |
-|---------|-------------|------------------------|
-| **Packaging** | `eclipse-plugin` | `jar` |
-| **POM Metadata** | Minimal consumer POM | Complete Maven POM |
-| **Dependencies** | Eclipse P2 | Standard Maven |
-| **Usage** | Eclipse plugins only | Any Maven project |
-| **Sources JAR** | ❌ Not included | ✅ Included |
-| **Javadoc JAR** | ❌ Not included | ✅ Included |
-| **IDE Integration** | Limited | Full support |
-| **Dependency Resolution** | P2 resolver | Maven resolver |
+The project now uses standard Maven for building. The legacy Tycho (Eclipse plugin) build is still available via `pom-tycho.xml` for Eclipse plugin development.
+
+| Feature | Standard Maven Build | Legacy Tycho Build |
+|---------|---------------------|-------------------|
+| **Packaging** | `jar` | `eclipse-plugin` |
+| **POM Metadata** | Complete Maven POM | Minimal consumer POM |
+| **Dependencies** | Standard Maven | Eclipse P2 |
+| **Usage** | Any Maven project | Eclipse plugins only |
+| **Sources JAR** | ✅ Included | ❌ Not included |
+| **Javadoc JAR** | ✅ Included | ❌ Not included |
+| **IDE Integration** | Full support | Limited |
+| **Dependency Resolution** | Maven resolver | P2 resolver |
+| **Build Command** | `mvn clean install` | `mvn -f pom-tycho.xml clean install` |
 
 ## Troubleshooting
 
 ### Dependencies Not Found
 
-Ensure you've installed both libraries:
+Ensure you've built and installed the libraries:
 
 ```bash
-cd esa.sle.java.api.ccsds.utils && ./install-maven.sh && cd ..
-cd esa.sle.java.api.core && ./install-maven.sh && cd ..
+mvn clean install
 ```
 
 ### Wrong Metadata
 
-If you see Eclipse-specific metadata, reinstall with standalone POMs:
+If you see Eclipse-specific metadata, rebuild with standard Maven:
 
 ```bash
-mvn -f esa.sle.java.api.ccsds.utils/pom-standalone.xml clean install
-mvn -f esa.sle.java.api.core/pom-standalone.xml clean install
+mvn clean install
 ```
 
 ### Version Conflicts
@@ -283,9 +283,9 @@ java -version  # Should show 17 or higher
 
 ## Build Times
 
-- **CCSDS Utilities**: ~9 seconds
-- **SLE API Core**: ~27 seconds (includes ASN.1 generation)
-- **Total**: ~36 seconds
+- **CCSDS Utilities**: ~7 seconds
+- **SLE API Core**: ~11 seconds (includes ASN.1 generation)
+- **Total**: ~19 seconds
 
 ## Artifacts Installed
 
@@ -318,10 +318,10 @@ java -version  # Should show 17 or higher
 ## Support
 
 For issues with Maven dependencies:
-1. Check that installation scripts completed successfully
+1. Ensure you've run `mvn clean install` from the project root
 2. Verify artifacts exist in `~/.m2/repository/`
 3. Ensure Java 17+ and Maven 3.8.5+ are installed
-4. Review individual MAVEN_INSTALL.md files for detailed troubleshooting
+4. Check the main [README](README.md) for build instructions
 
 ## License
 
